@@ -1,0 +1,10 @@
+.pio/
+.venv/
+venv/
+.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example

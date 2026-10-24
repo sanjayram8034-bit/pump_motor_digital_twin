@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Industrial Pump & Motor Digital Twin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-base: #0B0F17;
+      --bg-surface: #121926;
+      --bg-card: #182234;
+      --bg-card-sub: #1F2B42;
+      --border-color: #263550;
+      --border-light: #34486E;
+      
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      
+      --accent-cyan: #06B6D4;
+      --accent-blue: #3B82F6;
+      --color-healthy: #10B981;
+      --color-running: #0EA5E9;
+      --color-warning: #F59E0B;
+      --color-critical: #EF4444;
+      --color-idle: #64748B;
+
+      --glow-healthy: 0 0 15px rgba(16, 185, 129, 0.35);
+      --glow-warning: 0 0 15px rgba(245, 158, 11, 0.35);
+      --glow-critical: 0 0 20px rgba(239, 68, 68, 0.45);
+      --glow-cyan: 0 0 12px rgba(6, 182, 212, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 2rem;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 40%);
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #0284c7, #0d9488);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .brand-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+    }
+
+    .brand h1 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--color-healthy);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--color-healthy);
+      border-radius: 50%;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .btn-manual-refresh {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .btn-manual-refresh:hover {
+      background: var(--bg-card-sub);
+      border-color: var(--border-light);
+    }
+
+    /* System Status Bar */
+    .status-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* Main Grid */
+    .twin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .twin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .component-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .component-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-cyan), transparent);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .card-title-group h2 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .card-title-group span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .badge-running { background: rgba(14, 165, 233, 0.15); color: #38BDF8; border: 1px solid rgba(14, 165, 233, 0.4); }
+    .badge-healthy { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-critical { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-idle { background: rgba(100, 116, 139, 0.2); color: #94A3B8; border: 1px solid rgba(100, 116, 139, 0.4); }
+
+    /* Health Gauge Section */
+    .health-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .health-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+
+    .health-score {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .health-bar-container {
+      flex: 1;
+      margin-left: 2rem;
+    }
+
+    .health-bar-bg {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.35rem;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--color-healthy);
+      border-radius: 4px;
+      transition: width 0.5s ease, background-color 0.5s ease;
+    }
+
+    .health-note {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ML Predictive Status Strip */
+    .ml-status-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.55rem 0.85rem;
+      margin-bottom: 1rem;
+      font-size: 0.76rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .ml-status-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .ml-pill {
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-healthy);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .ml-pill.offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-critical);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .ml-prediction-text {
+      color: var(--text-secondary);
+    }
+
+    .ml-confidence-text {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    /* Diagnostic Alert & Reason Box */
+    .diagnostic-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.85rem;
+      margin-bottom: 1.1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      transition: all 0.25s ease;
+    }
+
+    .diagnostic-box.warning {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.45);
+      color: #FCD34D;
+    }
+
+    .diagnostic-box.critical {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.55);
+      color: #FCA5A5;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    }
+
+    .diagnostic-icon {
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .diagnostic-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+    }
+
+    /* Telemetry Parameters Grid */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.85rem;
+    }
+
+    .pump-telemetry-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 640px) {
+      .telemetry-grid, .pump-telemetry-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .param-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.9rem;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .param-tile:hover {
+      border-color: var(--border-light);
+      background: var(--bg-card-sub);
+    }
+
+    .param-name {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .param-value-box {
+      display: flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+
+    .param-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .param-unit {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Simulation Control Section */
+    .controls-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: auto;
+    }
+
+    .controls-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.85rem;
+    }
+
+    .controls-header h3 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .sim-buttons-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .btn-sim {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.5rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-sim:hover {
+      background: var(--bg-card-sub);
+      border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+    }
+
+    .btn-sim.warn:hover {
+      border-color: var(--color-warning);
+      box-shadow: var(--glow-warning);
+    }
+
+    .btn-sim.crit:hover {
+      border-color: var(--color-critical);
+      box-shadow: var(--glow-critical);
+    }
+
+    .api-status-msg {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+    }
+
+    footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top SCADA Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>
+      </div>
+      <div>
+        <h1>Industrial Digital Twin</h1>
+        <p>Pump & Motor Real-Time Predictive Maintenance Console</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="live-badge" id="connBadge">
+        <span class="pulse-dot" id="connDot"></span>
+        <span id="connText">TWIN LIVE (1.5s)</span>
+      </div>
+      <button class="btn-manual-refresh" id="refreshBtn" onclick="fetchTwinState()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- Aggregate System Banner -->
+  <section class="status-banner">
+    <div class="status-item">
+      <div>
+        <div class="status-label">Overall Twin State</div>
+        <div class="status-value" id="systemStatusText" style="color: var(--accent-cyan);">INITIALIZING</div>
+      </div>
+    </div>
+    <div class="status-item">
+      <div>
+        <div class="status-label">Last Ingested Timestamp</div>
+        <div class="status-value" id="lastUpdatedText">--:--:--</div>
+      </div>
+    </div>
+    <div class="status-item">
+      <div>
+        <div class="status-label">API Gateway</div>
+        <div class="status-value" id="apiEndpointText">GET /twin</div>
+      </div>
+    </div>
+    <div class="status-item">
+      <div>
+        <div class="status-label">Telemetry Source</div>
+        <div class="status-value" id="dataSourceText" style="color: var(--accent-cyan);">INITIALIZING</div>
+      </div>
+    </div>
+    <div class="status-item">
+      <div>
+        <div class="status-label">Predictive Engine</div>
+        <div class="status-value" id="engineStatusText" style="color: var(--color-healthy);">CHECKING ML ENGINE...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Twin Display Grid -->
+  <main class="twin-grid">
+
+    <!-- MOTOR DIGITAL TWIN -->
+    <article class="component-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>Induction Motor Twin</h2>
+          <span>Subsystem ID: MOT-01A &bull; 3-Phase AC</span>
+        </div>
+        <div class="badge badge-idle" id="motorStatusBadge">IDLE</div>
+      </div>
+
+      <!-- Motor Health Section -->
+      <div class="health-summary">
+        <div>
+          <div class="health-label">Motor Health Index</div>
+          <div class="health-score" id="motorHealthScore" style="color: var(--color-healthy);">100%</div>
+        </div>
+        <div class="health-bar-container">
+          <div class="health-bar-bg">
+            <div class="health-bar-fill" id="motorHealthBar" style="width: 100%;"></div>
+          </div>
+          <div class="health-note">
+            <span>Status: <strong id="motorStatusLabel">IDLE</strong></span>
+            <span>Target: &gt;80%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor ML Condition & Model Status Strip -->
+      <div class="ml-status-strip">
+        <div class="ml-status-left">
+          <span class="ml-pill" id="motorModelBadge">ML MODEL: CHECKING</span>
+          <span class="ml-prediction-text">ML Condition: <strong id="motorMlCondition">--</strong></span>
+        </div>
+        <div class="ml-confidence-text" id="motorMlConfidence">Confidence: --</div>
+      </div>
+
+      <!-- Motor Diagnostic Alert & Reason -->
+      <div class="diagnostic-box" id="motorDiagnosticBox">
+        <span class="diagnostic-icon">&#9432;</span>
+        <span class="diagnostic-text" id="motorDiagnosticText">Motor is in standby/idle.</span>
+      </div>
+
+      <!-- Motor Telemetry Parameters -->
+      <div class="telemetry-grid">
+        <div class="param-tile">
+          <div class="param-name">Motor Temperature</div>
+          <div class="param-value-box">
+            <span class="param-value" id="motorTemp">--</span>
+            <span class="param-unit">&deg;C</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Vibration (RMS)</div>
+          <div class="param-value-box">
+            <span class="param-value" id="motorVib">--</span>
+            <span class="param-unit">mm/s</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Motor Current</div>
+          <div class="param-value-box">
+            <span class="param-value" id="motorCurrent">--</span>
+            <span class="param-unit">A</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Motor Speed</div>
+          <div class="param-value-box">
+            <span class="param-value" id="motorRpm">--</span>
+            <span class="param-unit">RPM</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- PUMP DIGITAL TWIN -->
+    <article class="component-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>Centrifugal Pump Twin</h2>
+          <span>Subsystem ID: PMP-01B &bull; High Head Water</span>
+        </div>
+        <div class="badge badge-idle" id="pumpStatusBadge">IDLE</div>
+      </div>
+
+      <!-- Pump Health Section -->
+      <div class="health-summary">
+        <div>
+          <div class="health-label">Pump Health Index</div>
+          <div class="health-score" id="pumpHealthScore" style="color: var(--color-healthy);">100%</div>
+        </div>
+        <div class="health-bar-container">
+          <div class="health-bar-bg">
+            <div class="health-bar-fill" id="pumpHealthBar" style="width: 100%;"></div>
+          </div>
+          <div class="health-note">
+            <span>Status: <strong id="pumpStatusLabel">IDLE</strong></span>
+            <span>Target: &gt;80%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pump ML Condition & Model Status Strip -->
+      <div class="ml-status-strip">
+        <div class="ml-status-left">
+          <span class="ml-pill" id="pumpModelBadge">ML MODEL: CHECKING</span>
+          <span class="ml-prediction-text">ML Condition: <strong id="pumpMlCondition">--</strong></span>
+        </div>
+        <div class="ml-confidence-text" id="pumpMlConfidence">Confidence: --</div>
+      </div>
+
+      <!-- Pump Diagnostic Alert & Reason -->
+      <div class="diagnostic-box" id="pumpDiagnosticBox">
+        <span class="diagnostic-icon">&#9432;</span>
+        <span class="diagnostic-text" id="pumpDiagnosticText">Pump is in standby/idle.</span>
+      </div>
+
+      <!-- Pump Telemetry Parameters -->
+      <div class="telemetry-grid pump-telemetry-grid">
+        <div class="param-tile">
+          <div class="param-name">Pump Temperature</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpTemp">--</span>
+            <span class="param-unit">&deg;C</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Vibration (RMS)</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpVib">--</span>
+            <span class="param-unit">mm/s</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Pump Current</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpCurrent">--</span>
+            <span class="param-unit">A</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Pump Speed</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpRpm">--</span>
+            <span class="param-unit">RPM</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Discharge Pressure</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpPressure">--</span>
+            <span class="param-unit">Bar</span>
+          </div>
+        </div>
+
+        <div class="param-tile">
+          <div class="param-name">Discharge Flow Rate</div>
+          <div class="param-value-box">
+            <span class="param-value" id="pumpFlow">--</span>
+            <span class="param-unit">m&sup3;/h</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </main>
+
+  <!-- Central Dynamically Coupled Telemetry Simulator -->
+  <section class="controls-panel">
+    <div class="controls-header">
+      <div>
+        <h3>Coupled Pump-Motor Simulator (Simulated Demonstration Model)</h3>
+        <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">
+          Derived physics: Direct drive shaft coupling (RPM<sub>pump</sub> = RPM<sub>motor</sub>), 
+          simplified pump Affinity Laws (Q &prop; N, P &prop; N&sup2;), motor current reduction under pump dry-run starvation, 
+          and configurable baseplate vibration transmissibility.
+        </p>
+      </div>
+      <span style="font-size: 0.72rem; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace;">POST /telemetry/simulate</span>
+    </div>
+    <div class="sim-buttons-group">
+      <button class="btn-sim" onclick="sendSampleTelemetry('normal')">&#9654; Reset Baseline (Normal BEP)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_warning')">&#9888; Inject Motor Stress (Derived Pump Derate)</button>
+      <button class="btn-sim crit" onclick="sendSampleTelemetry('pump_critical')">&#9888; Inject Pump Dry-Run (Derived Motor Unloading)</button>
+      <button class="btn-sim" onclick="sendSampleTelemetry('idle')">&#9209; Stop System (Idle Standby)</button>
+    </div>
+    <div class="api-status-msg" id="apiStatusMsg">Ready. Polling /twin every 1.5s. [SIMULATION MODEL] All injected scenarios are idealized numerical approximations, not physical sensor measurements.</div>
+  </section>
+
+  <footer>
+    <span>Pump & Motor Digital Twin &bull; FastAPI Backend &bull; Predictive Maintenance Framework</span>
+    <span>Scikit-Learn ML Classifiers &bull; Ready for ESP32 &bull; CPS Control</span>
+  </footer>
+
+  <script>
+    // Determine backend API host: works seamlessly whether served from FastAPI or opened locally
+    const API_BASE = window.location.origin.includes('http') && !window.location.protocol.startsWith('file') 
+      ? window.location.origin 
+      : 'http://localhost:8000';
+
+    const POLL_INTERVAL = 1500; // 1.5 seconds auto-refresh
+
+    function updateBadge(el, status) {
+      if (!el) return;
+      el.className = 'badge';
+      const s = (status || 'IDLE').toUpperCase();
+      el.textContent = s;
+
+      if (s === 'RUNNING' || s === 'OPERATIONAL') {
+        el.classList.add('badge-running');
+      } else if (s === 'NORMAL' || s === 'HEALTHY') {
+        el.classList.add('badge-healthy');
+      } else if (s === 'WARNING') {
+        el.classList.add('badge-warning');
+      } else if (s === 'CRITICAL' || s === 'CRITICAL_ALERT') {
+        el.classList.add('badge-critical');
+      } else {
+        el.classList.add('badge-idle');
+      }
+    }
+
+    function formatNumber(val, decimals = 1) {
+      if (val === undefined || val === null || isNaN(val)) return '--';
+      return Number(val).toFixed(decimals);
+    }
+
+    function updateHealthDisplay(scoreEl, barEl, labelEl, score, status) {
+      const s = (score !== undefined && score !== null) ? Number(score) : 100;
+      if (scoreEl) scoreEl.textContent = `${s.toFixed(1)}%`;
+      if (barEl) {
+        barEl.style.width = `${Math.min(100, Math.max(0, s))}%`;
+        if (s >= 85) {
+          barEl.style.backgroundColor = 'var(--color-healthy)';
+          if (scoreEl) scoreEl.style.color = 'var(--color-healthy)';
+        } else if (s >= 65) {
+          barEl.style.backgroundColor = 'var(--color-warning)';
+          if (scoreEl) scoreEl.style.color = 'var(--color-warning)';
+        } else {
+          barEl.style.backgroundColor = 'var(--color-critical)';
+          if (scoreEl) scoreEl.style.color = 'var(--color-critical)';
+        }
+      }
+      if (labelEl) labelEl.textContent = status || 'IDLE';
+    }
+
+    async function fetchTwinState() {
+      try {
+        const res = await fetch(`${API_BASE}/twin`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderTwinState(data);
+        
+        document.getElementById('connDot').style.backgroundColor = 'var(--color-healthy)';
+        document.getElementById('connText').textContent = 'TWIN LIVE (1.5s)';
+      } catch (err) {
+        document.getElementById('connDot').style.backgroundColor = 'var(--color-critical)';
+        document.getElementById('connText').textContent = 'OFFLINE / RECONNECTING';
+        document.getElementById('apiStatusMsg').textContent = `Connection alert: ${err.message}. Ensure backend is running at ${API_BASE}`;
+      }
+    }
+
+    function renderTwinState(state) {
+      if (!state) return;
+
+      // Overall System Status
+      const sysStatus = state.system_status || 'UNKNOWN';
+      const sysEl = document.getElementById('systemStatusText');
+      sysEl.textContent = sysStatus;
+      if (sysStatus === 'CRITICAL_ALERT') sysEl.style.color = 'var(--color-critical)';
+      else if (sysStatus === 'WARNING') sysEl.style.color = 'var(--color-warning)';
+      else if (sysStatus === 'OPERATIONAL') sysEl.style.color = 'var(--color-healthy)';
+      else sysEl.style.color = 'var(--text-secondary)';
+
+      // Telemetry Data Source
+      const srcEl = document.getElementById('dataSourceText');
+      if (srcEl) {
+        const src = state.data_source || 'initialized';
+        if (src === 'simulated') {
+          srcEl.textContent = 'SIMULATED SCENARIO';
+          srcEl.style.color = 'var(--color-warning)';
+        } else if (src === 'live_sensor') {
+          srcEl.textContent = 'LIVE SENSOR (ESP32/IoT)';
+          srcEl.style.color = 'var(--color-healthy)';
+        } else {
+          srcEl.textContent = 'INITIALIZED (NO DATA)';
+          srcEl.style.color = 'var(--text-muted)';
+        }
+      }
+
+      // Timestamp
+      if (state.last_updated) {
+        const d = new Date(state.last_updated);
+        document.getElementById('lastUpdatedText').textContent = d.toLocaleTimeString() + ' (UTC)';
+      } else {
+        document.getElementById('lastUpdatedText').textContent = 'No Telemetry Yet';
+      }
+
+      // Motor State
+      const motor = state.motor || {};
+      const mTelem = motor.telemetry;
+      updateBadge(document.getElementById('motorStatusBadge'), motor.status);
+      updateHealthDisplay(
+        document.getElementById('motorHealthScore'),
+        document.getElementById('motorHealthBar'),
+        document.getElementById('motorStatusLabel'),
+        motor.health,
+        motor.status
+      );
+
+      // Motor ML condition & model availability
+      const motorAvail = motor.model_available;
+      const motorCond = motor.predicted_condition || '--';
+      const motorConf = (motor.prediction_confidence !== undefined && motor.prediction_confidence !== null)
+        ? `${(motor.prediction_confidence * 100).toFixed(0)}%`
+        : '--';
+
+      const motorBadge = document.getElementById('motorModelBadge');
+      if (motorBadge) {
+        motorBadge.textContent = motorAvail ? 'ML MODEL: ONLINE' : 'ML MODEL: OFFLINE (FALLBACK)';
+        motorBadge.className = motorAvail ? 'ml-pill' : 'ml-pill offline';
+      }
+      const motorCondEl = document.getElementById('motorMlCondition');
+      if (motorCondEl) {
+        motorCondEl.textContent = motorCond;
+        if (motorCond === 'Critical') motorCondEl.style.color = 'var(--color-critical)';
+        else if (motorCond === 'Warning') motorCondEl.style.color = 'var(--color-warning)';
+        else if (motorCond === 'Normal') motorCondEl.style.color = 'var(--color-healthy)';
+        else motorCondEl.style.color = 'var(--text-secondary)';
+      }
+      const motorConfEl = document.getElementById('motorMlConfidence');
+      if (motorConfEl) motorConfEl.textContent = `Confidence: ${motorConf}`;
+
+      // Motor Diagnostic Details
+      const motorDiagBox = document.getElementById('motorDiagnosticBox');
+      const motorDiagText = document.getElementById('motorDiagnosticText');
+      if (motorDiagBox && motorDiagText) {
+        const mDetails = motor.prediction_details || (motor.status === 'IDLE' ? 'Motor is in standby/idle.' : 'Operating within nominal baseline.');
+        motorDiagText.textContent = mDetails;
+        if (motor.status === 'CRITICAL' || motor.predicted_condition === 'Critical') {
+          motorDiagBox.className = 'diagnostic-box critical';
+        } else if (motor.status === 'WARNING' || motor.predicted_condition === 'Warning') {
+          motorDiagBox.className = 'diagnostic-box warning';
+        } else {
+          motorDiagBox.className = 'diagnostic-box';
+        }
+      }
+
+      if (mTelem) {
+        document.getElementById('motorTemp').textContent = formatNumber(mTelem.temperature, 1);
+        document.getElementById('motorVib').textContent = formatNumber(mTelem.vibration, 2);
+        document.getElementById('motorCurrent').textContent = formatNumber(mTelem.current, 1);
+        document.getElementById('motorRpm').textContent = formatNumber(mTelem.rpm, 0);
+      }
+
+      // Pump State
+      const pump = state.pump || {};
+      const pTelem = pump.telemetry;
+      updateBadge(document.getElementById('pumpStatusBadge'), pump.status);
+      updateHealthDisplay(
+        document.getElementById('pumpHealthScore'),
+        document.getElementById('pumpHealthBar'),
+        document.getElementById('pumpStatusLabel'),
+        pump.health,
+        pump.status
+      );
+
+      // Pump ML condition & model availability
+      const pumpAvail = pump.model_available;
+      const pumpCond = pump.predicted_condition || '--';
+      const pumpConf = (pump.prediction_confidence !== undefined && pump.prediction_confidence !== null)
+        ? `${(pump.prediction_confidence * 100).toFixed(0)}%`
+        : '--';
+
+      const pumpBadge = document.getElementById('pumpModelBadge');
+      if (pumpBadge) {
+        pumpBadge.textContent = pumpAvail ? 'ML MODEL: ONLINE' : 'ML MODEL: OFFLINE (FALLBACK)';
+        pumpBadge.className = pumpAvail ? 'ml-pill' : 'ml-pill offline';
+      }
+      const pumpCondEl = document.getElementById('pumpMlCondition');
+      if (pumpCondEl) {
+        pumpCondEl.textContent = pumpCond;
+        if (pumpCond === 'Critical') pumpCondEl.style.color = 'var(--color-critical)';
+        else if (pumpCond === 'Warning') pumpCondEl.style.color = 'var(--color-warning)';
+        else if (pumpCond === 'Normal') pumpCondEl.style.color = 'var(--color-healthy)';
+        else pumpCondEl.style.color = 'var(--text-secondary)';
+      }
+      const pumpConfEl = document.getElementById('pumpMlConfidence');
+      if (pumpConfEl) pumpConfEl.textContent = `Confidence: ${pumpConf}`;
+
+      // Pump Diagnostic Details
+      const pumpDiagBox = document.getElementById('pumpDiagnosticBox');
+      const pumpDiagText = document.getElementById('pumpDiagnosticText');
+      if (pumpDiagBox && pumpDiagText) {
+        const pDetails = pump.prediction_details || (pump.status === 'IDLE' ? 'Pump is in standby/idle.' : 'Operating within nominal baseline.');
+        pumpDiagText.textContent = pDetails;
+        if (pump.status === 'CRITICAL' || pump.predicted_condition === 'Critical') {
+          pumpDiagBox.className = 'diagnostic-box critical';
+        } else if (pump.status === 'WARNING' || pump.predicted_condition === 'Warning') {
+          pumpDiagBox.className = 'diagnostic-box warning';
+        } else {
+          pumpDiagBox.className = 'diagnostic-box';
+        }
+      }
+
+      // Predictive Engine Banner Status
+      const engineStatusEl = document.getElementById('engineStatusText');
+      if (engineStatusEl) {
+        if (motorAvail && pumpAvail) {
+          engineStatusEl.textContent = 'SCIKIT-LEARN ML MODELS (ACTIVE)';
+          engineStatusEl.style.color = 'var(--color-healthy)';
+        } else if (motorAvail || pumpAvail) {
+          engineStatusEl.textContent = 'PARTIAL ML (1 MODEL OFFLINE)';
+          engineStatusEl.style.color = 'var(--color-warning)';
+        } else {
+          engineStatusEl.textContent = 'RULE-BASED FALLBACK (MODELS OFFLINE)';
+          engineStatusEl.style.color = 'var(--text-muted)';
+        }
+      }
+
+      if (pTelem) {
+        document.getElementById('pumpTemp').textContent = formatNumber(pTelem.temperature, 1);
+        document.getElementById('pumpVib').textContent = formatNumber(pTelem.vibration, 2);
+        document.getElementById('pumpCurrent').textContent = formatNumber(pTelem.current, 1);
+        document.getElementById('pumpRpm').textContent = formatNumber(pTelem.rpm, 0);
+        document.getElementById('pumpPressure').textContent = formatNumber(pTelem.pressure, 2);
+        document.getElementById('pumpFlow').textContent = formatNumber(pTelem.flow_rate, 1);
+      }
+    }
+
+    // Central Dynamically Coupled Physics Simulation Engine (Client-side mirror of backend/twin/simulation.py)
+    const CoupledSimulator = {
+      config: {
+        ratedRpm: 1485.0,
+        ratedFlow: 88.5,           // m³/h
+        ratedPressure: 4.8,        // Bar
+        ratedMotorCurrent: 14.2,   // A
+        ratedPumpCurrent: 11.8,    // A
+        ratedMotorTemp: 56.4,      // °C
+        ratedPumpTemp: 46.2,       // °C
+        baselineMotorVib: 1.6,     // mm/s RMS
+        baselinePumpVib: 1.3,      // mm/s RMS
+        ambientTemp: 26.0,         // °C
+        idleVib: 0.02,             // mm/s RMS
+        vibrationTransmissionRatio: 0.08, // Configurable structural transmission ratio (not a universal law)
+        motorNoLoadCurrent: 5.8    // A (approx 40% of rated induction current under fluid loss)
+      },
+
+      generate(scenario) {
+        const c = this.config;
+        const s = (scenario || 'normal').toLowerCase();
+
+        if (s === 'idle') {
+          // Stopped System
+          return {
+            motor: { temperature: c.ambientTemp, vibration: c.idleVib, current: 0.0, rpm: 0.0 },
+            pump: { temperature: c.ambientTemp, vibration: c.idleVib, current: 0.0, rpm: 0.0, pressure: 0.0, flow_rate: 0.0 }
+          };
+        }
+
+        if (s === 'motor_warning') {
+          // 1. Motor Stress Fault (Primary Fault)
+          const motorTemp = 78.5;
+          const motorVib = 5.2;
+          const motorCurrent = 23.2;
+          const motorRpm = 1445.0; // Slip increases due to mechanical drag
+
+          // 2. Derived Pump Effects (Coupled Physics)
+          // Direct shaft coupling: RPM_pump = RPM_motor
+          const pumpRpm = motorRpm;
+          const speedRatio = pumpRpm / c.ratedRpm; // ~0.973
+
+          // Simplified Pump Affinity Laws: Q ∝ N, P ∝ N²
+          const pumpFlow = Number((c.ratedFlow * speedRatio).toFixed(1));          // ~86.1 m³/h
+          const pumpPressure = Number((c.ratedPressure * Math.pow(speedRatio, 2)).toFixed(2)); // ~4.54 Bar
+          
+          // Structural vibration transmission
+          const excessMotorVib = Math.max(0, motorVib - c.baselineMotorVib);
+          const pumpVib = Number((c.baselinePumpVib + c.vibrationTransmissionRatio * excessMotorVib).toFixed(2)); // ~1.59 mm/s
+          const pumpTemp = Number((c.ratedPumpTemp + 2.5).toFixed(1)); // ~48.7 °C
+          const pumpCurrent = Number((c.ratedPumpCurrent * Math.pow(speedRatio, 3)).toFixed(1)); // ~10.9 A
+
+          return {
+            motor: { temperature: motorTemp, vibration: motorVib, current: motorCurrent, rpm: motorRpm },
+            pump: { temperature: pumpTemp, vibration: pumpVib, current: pumpCurrent, rpm: pumpRpm, pressure: pumpPressure, flow_rate: pumpFlow }
+          };
+        }
+
+        if (s === 'pump_critical') {
+          // 1. Pump Cavitation / Dry Run (Primary Fault)
+          const pumpFlow = 5.0;      // Collapse of fluid delivery
+          const pumpPressure = 0.30; // Severe suction head loss
+          const pumpTemp = 92.0;     // Seal/bearing dry friction heat
+          const pumpVib = 9.5;       // Violent cavitation shockwaves
+          const pumpCurrent = 2.5;   // Minimal hydraulic power
+
+          // 2. Derived Motor Effects (Coupled Physics)
+          // a) Rotor unloads: fluid mass lost, motor current collapses to no-load level
+          const motorCurrent = Number((c.motorNoLoadCurrent + 0.3).toFixed(1)); // ~6.1 A
+          // b) Slip decreases: rotor speed rises towards synchronous (1500 RPM)
+          const motorRpm = 1493.0;
+          const pumpRpm = motorRpm; // Direct shaft coupling
+          // c) Motor thermal behavior: motor losses drop, temperature remains at normal baseline
+          const motorTemp = Number((c.ratedMotorTemp - 0.4).toFixed(1)); // ~56.0 °C
+          // d) Transmitted cavitation shock: structural coupling transmits vibration
+          const excessPumpVib = Math.max(0, pumpVib - c.baselinePumpVib);
+          const motorVib = Number((c.baselineMotorVib + c.vibrationTransmissionRatio * excessPumpVib).toFixed(2)); // ~2.26 mm/s
+
+          return {
+            motor: { temperature: motorTemp, vibration: motorVib, current: motorCurrent, rpm: motorRpm },
+            pump: { temperature: pumpTemp, vibration: pumpVib, current: pumpCurrent, rpm: pumpRpm, pressure: pumpPressure, flow_rate: pumpFlow }
+          };
+        }
+
+        // Default: Normal Baseline (BEP Operation)
+        return {
+          motor: { temperature: c.ratedMotorTemp, vibration: c.baselineMotorVib, current: c.ratedMotorCurrent, rpm: c.ratedRpm },
+          pump: { temperature: c.ratedPumpTemp, vibration: c.baselinePumpVib, current: c.ratedPumpCurrent, rpm: c.ratedRpm, pressure: c.ratedPressure, flow_rate: c.ratedFlow }
+        };
+      }
+    };
+
+    // Central Telemetry Simulation Dispatcher
+    async function sendSampleTelemetry(scenario) {
+      const msgEl = document.getElementById('apiStatusMsg');
+      msgEl.textContent = `Injecting [${scenario.toUpperCase()}] coupled scenario...`;
+
+      try {
+        // Try dedicated backend simulation endpoint first
+        let updatedState = null;
+        try {
+          const resSim = await fetch(`${API_BASE}/telemetry/simulate?scenario=${encodeURIComponent(scenario)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (resSim.ok) {
+            updatedState = await resSim.json();
+          }
+        } catch (_) {
+          // Fall back to client-side engine + POST /telemetry
+        }
+
+        // If backend simulation endpoint wasn't reached, dispatch via standard /telemetry
+        if (!updatedState) {
+          const payload = CoupledSimulator.generate(scenario);
+          const res = await fetch(`${API_BASE}/telemetry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          updatedState = await res.json();
+        }
+
+        renderTwinState(updatedState);
+
+        const scenarioDescriptions = {
+          normal: 'Baseline reset (Normal BEP): Rated 1485 RPM, 88.5 m³/h, 4.8 Bar, 14.2A motor.',
+          motor_warning: 'Motor Warning: Motor temp 78.5°C, 5.2 mm/s, 1445 RPM. Derived pump: 1445 RPM, 86.1 m³/h (Affinity Q∝N), 4.54 Bar (P∝N²), 1.59 mm/s transmitted vib.',
+          pump_critical: 'Pump Critical (Dry-Run): Pump 0.3 Bar, 5 m³/h, 92°C, 9.5 mm/s. Derived motor: Unloaded current 6.1A, 1493 RPM, baseline temp 56.0°C, 2.26 mm/s transmitted vib (Motor ML: Normal).',
+          idle: 'System Stopped: 0 RPM, 0 current, 0 flow, ambient conditions.'
+        };
+
+        const desc = scenarioDescriptions[scenario] || scenario;
+        msgEl.textContent = `[SIMULATED] ${desc} (Injected at ${new Date().toLocaleTimeString()})`;
+      } catch (err) {
+        msgEl.textContent = `Simulation injection failed: ${err.message}. Ensure backend is running.`;
+      }
+    }
+
+    // Polling lifecycle
+    fetchTwinState();
+    setInterval(fetchTwinState, POLL_INTERVAL);
+  </script>
+</body>
+</html>
