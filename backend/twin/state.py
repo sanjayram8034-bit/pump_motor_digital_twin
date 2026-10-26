@@ -16,6 +16,10 @@ from ml.pump_model.predict import PUMP_TEMP_CRITICAL_THRESHOLD, PUMP_TEMP_WARNIN
 
 from ml.motor_model.predict import motor_predictor
 from ml.pump_model.predict import pump_predictor
+from backend.twin.diagnostics import (
+    diagnostic_engine,
+    ComponentDiagnosticsResult
+)
 
 
 class MotorTelemetry(BaseModel):
@@ -73,6 +77,10 @@ class DigitalTwinSnapshot(BaseModel):
     data_source: str = Field(default="initialized", description="Source of telemetry: 'live_sensor', 'simulated', or 'initialized'")
     motor: MotorState
     pump: PumpState
+    diagnostics: Optional[ComponentDiagnosticsResult] = Field(
+        default=None,
+        description="Explainable component-level fault diagnostics and 3D highlight mappings"
+    )
 
 
 def _evaluate_motor_telemetry(telemetry: MotorTelemetry) -> tuple[float, str, str, bool, Optional[float], str, Optional[str], Optional[str], bool]:
@@ -148,6 +156,12 @@ class DigitalTwinState:
         self.system_status: str = "INITIALIZED"
         self.data_source: str = "initialized"
         self.last_updated: Optional[datetime] = None
+        self.diagnostics: Optional[ComponentDiagnosticsResult] = diagnostic_engine.evaluate(
+            motor_telem=None,
+            pump_telem=None,
+            last_updated=None,
+            data_source=self.data_source
+        )
 
     def update_telemetry(self, payload: TelemetryPayload, source: str = "live_sensor") -> "DigitalTwinSnapshot":
         now = datetime.now(timezone.utc)
@@ -192,6 +206,15 @@ class DigitalTwinState:
             self.system_status = "IDLE"
 
         self.last_updated = now
+
+        # Evaluate component-level diagnostics with explainable rules
+        self.diagnostics = diagnostic_engine.evaluate(
+            motor_telem=self.motor.telemetry,
+            pump_telem=self.pump.telemetry,
+            last_updated=self.last_updated,
+            data_source=self.data_source
+        )
+
         return self.get_snapshot()
 
     def get_snapshot(self) -> DigitalTwinSnapshot:
@@ -201,12 +224,21 @@ class DigitalTwinState:
         if not self.pump.telemetry:
             self.pump.model_available = pump_predictor.model_available
 
+        if self.diagnostics is None:
+            self.diagnostics = diagnostic_engine.evaluate(
+                motor_telem=self.motor.telemetry,
+                pump_telem=self.pump.telemetry,
+                last_updated=self.last_updated,
+                data_source=self.data_source
+            )
+
         return DigitalTwinSnapshot(
             system_status=self.system_status,
             last_updated=self.last_updated,
             data_source=self.data_source,
             motor=self.motor,
-            pump=self.pump
+            pump=self.pump,
+            diagnostics=self.diagnostics
         )
 
 

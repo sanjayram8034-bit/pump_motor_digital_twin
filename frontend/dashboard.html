@@ -1,13 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Industrial Pump & Motor Digital Twin Dashboard</title>
+  <title>Industrial Pump & Motor Digital Twin — 3D & Component Diagnostics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Three.js and OrbitControls with CDN and Fallback Handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
   <style>
     :root {
       --bg-base: #0B0F17;
@@ -16,11 +23,11 @@
       --bg-card-sub: #1F2B42;
       --border-color: #263550;
       --border-light: #34486E;
-      
+
       --text-primary: #F1F5F9;
       --text-secondary: #94A3B8;
       --text-muted: #64748B;
-      
+
       --accent-cyan: #06B6D4;
       --accent-blue: #3B82F6;
       --color-healthy: #10B981;
@@ -49,7 +56,7 @@
       display: flex;
       flex-direction: column;
       padding: 1.25rem 2rem;
-      background-image: 
+      background-image:
         radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
         radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 40%);
     }
@@ -132,9 +139,18 @@
     }
 
     @keyframes pulse {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
     }
 
     .btn-manual-refresh {
@@ -164,10 +180,10 @@
       padding: 0.85rem 1.25rem;
       margin-bottom: 1.5rem;
       display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
     }
 
     .status-item {
@@ -177,30 +193,640 @@
     }
 
     .status-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
     }
 
     .status-value {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 600;
     }
 
-    /* Main Grid */
-    .twin-grid {
+    /* -------------------------------------------------------------------------
+       DEDICATED 3D VISUAL TWIN & COMPONENT DIAGNOSTICS CONTAINER
+       ------------------------------------------------------------------------- */
+    .twin-visual-container {
       display: grid;
-      grid-template-columns: 1fr 1.2fr;
+      grid-template-columns: 1.55fr 1fr;
       gap: 1.5rem;
       margin-bottom: 1.5rem;
     }
 
-    @media (max-width: 1024px) {
-      .twin-grid {
+    @media (max-width: 1200px) {
+      .twin-visual-container {
         grid-template-columns: 1fr;
       }
+    }
+
+    /* 3D Viewport Card */
+    .visual-viewport-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .visual-card-header {
+      padding: 0.85rem 1.25rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .visual-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .visual-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .visual-title-group h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .visual-title-group .subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Viewport Toolbar */
+    .viewport-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-toolbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+    }
+
+    .btn-toolbar:hover {
+      background: var(--bg-card-sub);
+      color: var(--text-primary);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-toolbar.active {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .btn-toolbar.cutaway-active {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--color-warning);
+      border-color: var(--color-warning);
+      font-weight: 600;
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border-color);
+      margin: 0 0.25rem;
+    }
+
+    /* 3D Canvas Wrapper */
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 440px;
+      background: radial-gradient(circle at 50% 50%, #151e2d 0%, #0a0e17 100%);
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    .canvas-wrapper:active {
+      cursor: grabbing;
+    }
+
+    #threeContainer {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Floating Tooltip */
+    .component-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(18, 25, 38, 0.95);
+      border: 1px solid var(--accent-cyan);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), var(--glow-cyan);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      color: var(--text-primary);
+      display: none;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.15s ease-out;
+      max-width: 260px;
+    }
+
+    .tooltip-header {
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      font-size: 0.82rem;
+      margin-bottom: 0.2rem;
+      color: var(--accent-cyan);
+    }
+
+    .tooltip-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .tooltip-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      line-height: 1.2;
+    }
+
+    /* Viewport HUD */
+    .viewport-hud {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(to top, rgba(11, 15, 23, 0.95) 0%, rgba(11, 15, 23, 0.4) 80%, transparent 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 0.75rem;
+    }
+
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hud-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hud-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent-cyan);
+    }
+
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .hud-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-healthy);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .hud-hint {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+
+    /* Fallback 2D Isometric Schematic */
+    .fallback-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      z-index: 10;
+    }
+
+    .fallback-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 6px;
+      padding: 0.5rem 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .fallback-icon {
+      font-size: 1.2rem;
+      color: var(--color-warning);
+    }
+
+    .fallback-content h4 {
+      font-size: 0.82rem;
+      color: var(--color-warning);
+    }
+
+    .fallback-content p {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .fallback-schematic-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Component Legend Bar */
+    .component-legend-bar {
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .legend-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-state-indicators {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 0.25rem;
+      vertical-align: middle;
+    }
+
+    .legend-dot.normal { background: var(--color-healthy); box-shadow: var(--glow-healthy); }
+    .legend-dot.warning { background: var(--color-warning); box-shadow: var(--glow-warning); }
+    .legend-dot.critical { background: var(--color-critical); box-shadow: var(--glow-critical); }
+
+    .legend-chips-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .legend-chip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .legend-chip:hover {
+      border-color: var(--accent-cyan);
+      color: var(--text-primary);
+      background: var(--bg-card-sub);
+    }
+
+    .legend-chip.active-selected {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.15);
+      font-weight: 600;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .legend-chip.state-warning {
+      border-color: rgba(245, 158, 11, 0.5);
+      color: var(--color-warning);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .legend-chip.state-critical {
+      border-color: rgba(239, 68, 68, 0.6);
+      color: var(--color-critical);
+      background: rgba(239, 68, 68, 0.15);
+      animation: pulse-border 1.5s infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(239, 68, 68, 0.4); }
+      50% { border-color: rgba(239, 68, 68, 1.0); }
+    }
+
+    /* -------------------------------------------------------------------------
+       COMPONENT DIAGNOSTICS PANEL (RIGHT COLUMN)
+       ------------------------------------------------------------------------- */
+    .diagnostics-panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .diag-card-header {
+      padding: 0.85rem 1.25rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .diag-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .diag-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--color-healthy);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .diag-title-group h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .diag-status-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-healthy);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .diag-status-pill.warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--color-warning);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    .diag-status-pill.critical {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-critical);
+      border-color: rgba(239, 68, 68, 0.6);
+      box-shadow: var(--glow-critical);
+    }
+
+    .diag-summary-box {
+      padding: 0.65rem 1.15rem;
+      background: var(--bg-card-sub);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.76rem;
+      line-height: 1.35;
+      color: var(--text-primary);
+    }
+
+    /* Diagnostics Scrollable List */
+    .diag-list-container {
+      flex: 1;
+      padding: 0.85rem 1.15rem;
+      overflow-y: auto;
+      max-height: 290px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .diag-entry-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .diag-entry-card:hover {
+      border-color: var(--accent-cyan);
+      background: #1c283d;
+    }
+
+    .diag-entry-card.selected {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
+    }
+
+    .diag-entry-card.critical {
+      border-left: 4px solid var(--color-critical);
+    }
+
+    .diag-entry-card.warning {
+      border-left: 4px solid var(--color-warning);
+    }
+
+    .diag-entry-card.normal {
+      border-left: 4px solid var(--color-healthy);
+    }
+
+    .diag-entry-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+
+    .diag-comp-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+
+    .diag-severity-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .diag-severity-badge.CRITICAL {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-critical);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .diag-severity-badge.WARNING {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--color-warning);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .diag-severity-badge.NORMAL {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-healthy);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .diag-fault-name {
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .diag-explanation {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      margin-bottom: 0.4rem;
+    }
+
+    .diag-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.35rem;
+      margin-top: 0.35rem;
+    }
+
+    .diag-confidence {
+      color: var(--accent-blue);
+    }
+
+    /* Selected Component Inspector Card */
+    .selected-component-inspector {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 0.85rem 1.15rem;
+    }
+
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .inspector-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+    }
+
+    .inspector-status-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-healthy);
+    }
+
+    .inspector-body {
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .inspector-action {
+      margin-top: 0.4rem;
+      padding: 0.35rem 0.65rem;
+      background: rgba(6, 182, 212, 0.08);
+      border-left: 3px solid var(--accent-cyan);
+      font-size: 0.7rem;
+      color: var(--text-primary);
+    }
+
+    .inspector-limits {
+      margin-top: 0.3rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Main Twin Cards Grid (Preserved) */
+    .twin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
     }
 
     .component-card {
@@ -208,235 +834,183 @@
       border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
       position: relative;
-      overflow: hidden;
-    }
-
-    .component-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent-cyan), transparent);
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1.25rem;
-      padding-bottom: 0.85rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      align-items: center;
     }
 
     .card-title-group h2 {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 1.2rem;
-      font-weight: 600;
+      font-size: 1.15rem;
+      font-weight: 700;
       letter-spacing: 0.5px;
     }
 
     .card-title-group span {
       font-size: 0.75rem;
       color: var(--text-muted);
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.25rem 0.65rem;
-      border-radius: 4px;
-      font-size: 0.72rem;
       font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
     }
 
-    .badge-running { background: rgba(14, 165, 233, 0.15); color: #38BDF8; border: 1px solid rgba(14, 165, 233, 0.4); }
-    .badge-healthy { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); }
-    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.4); }
-    .badge-critical { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.4); }
-    .badge-idle { background: rgba(100, 116, 139, 0.2); color: #94A3B8; border: 1px solid rgba(100, 116, 139, 0.4); }
+    /* Badges */
+    .badge {
+      padding: 0.3rem 0.7rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
 
-    /* Health Gauge Section */
+    .badge-running { background: rgba(14, 165, 233, 0.15); color: var(--color-running); border: 1px solid rgba(14, 165, 233, 0.4); }
+    .badge-healthy { background: rgba(16, 185, 129, 0.15); color: var(--color-healthy); border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--color-critical); border: 1px solid rgba(239, 68, 68, 0.6); box-shadow: var(--glow-critical); }
+    .badge-idle { background: rgba(100, 116, 139, 0.15); color: var(--color-idle); border: 1px solid rgba(100, 116, 139, 0.4); }
+
+    /* Health Summary */
     .health-summary {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 1.25rem;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 0.85rem;
+      padding: 0.85rem 1rem;
     }
 
     .health-label {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      margin-bottom: 0.25rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
     }
 
     .health-score {
       font-family: 'Chakra Petch', sans-serif;
       font-size: 1.8rem;
       font-weight: 700;
-      letter-spacing: -0.5px;
+      line-height: 1;
     }
 
     .health-bar-container {
       flex: 1;
-      margin-left: 2rem;
     }
 
     .health-bar-bg {
-      height: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 4px;
+      width: 100%;
+      height: 10px;
+      background: var(--bg-card-sub);
+      border-radius: 9999px;
       overflow: hidden;
       margin-bottom: 0.35rem;
     }
 
     .health-bar-fill {
       height: 100%;
-      width: 100%;
-      background: var(--color-healthy);
-      border-radius: 4px;
-      transition: width 0.5s ease, background-color 0.5s ease;
+      border-radius: 9999px;
+      transition: width 0.4s ease, background-color 0.4s ease;
     }
 
     .health-note {
-      font-size: 0.7rem;
-      color: var(--text-muted);
       display: flex;
       justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
     }
 
-    /* ML Predictive Status Strip */
+    /* ML Status Strip */
     .ml-status-strip {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(0, 0, 0, 0.28);
+      background: var(--bg-card-sub);
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 0.55rem 0.85rem;
-      margin-bottom: 1rem;
-      font-size: 0.76rem;
-      font-family: 'JetBrains Mono', monospace;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
     }
 
     .ml-status-left {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
 
     .ml-pill {
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--color-healthy);
-      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-weight: 700;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
     }
 
     .ml-pill.offline {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--color-critical);
-      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: var(--color-warning);
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
     }
 
     .ml-prediction-text {
-      color: var(--text-secondary);
+      font-weight: 600;
     }
 
     .ml-confidence-text {
-      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
       font-size: 0.72rem;
     }
 
-    /* Diagnostic Alert & Reason Box */
+    /* Diagnostic Box */
     .diagnostic-box {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 0.5rem 0.85rem;
-      margin-bottom: 1.1rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      font-size: 0.76rem;
-      color: var(--text-secondary);
+      background: rgba(6, 182, 212, 0.06);
+      border-left: 3px solid var(--accent-cyan);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.78rem;
       line-height: 1.35;
-      transition: all 0.25s ease;
+      display: flex;
+      gap: 0.5rem;
     }
 
     .diagnostic-box.warning {
       background: rgba(245, 158, 11, 0.08);
-      border-color: rgba(245, 158, 11, 0.45);
-      color: #FCD34D;
+      border-left-color: var(--color-warning);
     }
 
     .diagnostic-box.critical {
-      background: rgba(239, 68, 68, 0.12);
-      border-color: rgba(239, 68, 68, 0.55);
-      color: #FCA5A5;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.1);
+      border-left-color: var(--color-critical);
     }
 
-    .diagnostic-icon {
-      font-size: 0.85rem;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .diagnostic-text {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.73rem;
-    }
-
-    /* Telemetry Parameters Grid */
+    /* Telemetry Grid */
     .telemetry-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 0.85rem;
-    }
-
-    .pump-telemetry-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    @media (max-width: 640px) {
-      .telemetry-grid, .pump-telemetry-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      gap: 0.75rem;
     }
 
     .param-tile {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 0.9rem;
-      position: relative;
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    .param-tile:hover {
-      border-color: var(--border-light);
-      background: var(--bg-card-sub);
+      padding: 0.75rem 0.85rem;
     }
 
     .param-name {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 0.4rem;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
     }
 
     .param-value-box {
@@ -447,15 +1021,13 @@
 
     .param-value {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.35rem;
+      font-size: 1.25rem;
       font-weight: 600;
-      color: var(--text-primary);
     }
 
     .param-unit {
       font-size: 0.75rem;
-      color: var(--text-secondary);
-      font-weight: 500;
+      color: var(--text-muted);
     }
 
     /* Simulation Control Section */
@@ -481,19 +1053,28 @@
       color: var(--text-secondary);
     }
 
+    .sim-scenarios-category {
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0.6rem 0 0.35rem 0;
+    }
+
     .sim-buttons-group {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 0.55rem;
     }
 
     .btn-sim {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
-      padding: 0.5rem 0.9rem;
+      padding: 0.45rem 0.8rem;
       border-radius: 6px;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-family: 'JetBrains Mono', monospace;
       cursor: pointer;
       transition: all 0.2s;
@@ -519,7 +1100,8 @@
       font-size: 0.75rem;
       font-family: 'JetBrains Mono', monospace;
       color: var(--text-muted);
-      margin-top: 0.6rem;
+      margin-top: 0.75rem;
+      line-height: 1.4;
     }
 
     footer {
@@ -533,6 +1115,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- Top SCADA Header -->
@@ -540,13 +1123,15 @@
     <div class="brand">
       <div class="brand-icon">
         <svg viewBox="0 0 24 24">
-          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+          <path
+            d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+          </path>
           <circle cx="12" cy="12" r="4"></circle>
         </svg>
       </div>
       <div>
         <h1>Industrial Digital Twin</h1>
-        <p>Pump & Motor Real-Time Predictive Maintenance Console</p>
+        <p>Pump & Motor 3D Physical Twin & Explainable Component Diagnostics</p>
       </div>
     </div>
 
@@ -557,7 +1142,7 @@
       </div>
       <button class="btn-manual-refresh" id="refreshBtn" onclick="fetchTwinState()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
         </svg>
         Refresh
       </button>
@@ -598,7 +1183,126 @@
     </div>
   </section>
 
-  <!-- Main Twin Display Grid -->
+  <!-- -------------------------------------------------------------------------
+       DEDICATED 3D VISUAL TWIN & COMPONENT DIAGNOSTICS CONTAINER
+       ------------------------------------------------------------------------- -->
+  <section class="twin-visual-container" id="twin3DSection">
+
+    <!-- LEFT COLUMN: Interactive 3D Model Viewport -->
+    <div class="visual-viewport-card">
+      <div class="visual-card-header">
+        <div class="visual-title-group">
+          <div class="visual-badge">3D VISUAL TWIN</div>
+          <div>
+            <h3 id="currentViewTitle">Coupled Skid Assembly</h3>
+            <span class="subtext">Interactive Physical Model &bull; Click to Inspect</span>
+          </div>
+        </div>
+
+        <!-- Viewport Toolbar -->
+        <div class="viewport-toolbar">
+          <button class="btn-toolbar active" id="btnViewCoupled" onclick="set3DView('coupled')">Coupled Skid</button>
+          <button class="btn-toolbar" id="btnViewMotor" onclick="set3DView('motor')">Motor View</button>
+          <button class="btn-toolbar" id="btnViewPump" onclick="set3DView('pump')">Pump View</button>
+          <div class="toolbar-divider"></div>
+          <button class="btn-toolbar toggle-btn" id="btnCutawayToggle" onclick="toggleCutawayMode()">
+            <span>&#9881;</span> <span id="cutawayLabel">Cutaway: OFF</span>
+          </button>
+          <button class="btn-toolbar" id="btnAutoRotate" onclick="toggleAutoRotate()">
+            <span>&#8634; Rotate</span>
+          </button>
+          <button class="btn-toolbar" onclick="reset3DCamera()">
+            <span>&#8942; Reset</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Canvas / Viewport Container -->
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <div id="threeContainer"></div>
+
+        <!-- Floating Tooltip -->
+        <div class="component-tooltip" id="compTooltip">
+          <div class="tooltip-header" id="tooltipHeader">Component Name</div>
+          <div class="tooltip-status" id="tooltipStatus">Status: NORMAL</div>
+          <div class="tooltip-desc" id="tooltipDesc">Telemetry normal</div>
+        </div>
+
+        <!-- Viewport HUD / Bottom Overlay -->
+        <div class="viewport-hud">
+          <div class="hud-left">
+            <span class="hud-label">INSPECTOR:</span>
+            <span class="hud-value" id="hudSelectedComp">Click any component to inspect</span>
+          </div>
+          <div class="hud-right">
+            <span class="hud-tag" id="hudSeverityTag">ALL NOMINAL</span>
+            <span class="hud-hint">Left Drag: Orbit &bull; Scroll: Zoom &bull; Right Drag: Pan</span>
+          </div>
+        </div>
+
+        <!-- Fallback Banner if Three.js or WebGL unavailable -->
+        <div class="fallback-overlay" id="fallbackOverlay" style="display: none;">
+          <div class="fallback-banner">
+            <div class="fallback-icon">&#9888;</div>
+            <div class="fallback-content">
+              <h4>WebGL / 3D Asset Fallback Active</h4>
+              <p>Displaying interactive 2D geometric cutaway twin with synchronized component diagnostics.</p>
+            </div>
+          </div>
+          <div id="fallbackSchematic" class="fallback-schematic-container"></div>
+        </div>
+      </div>
+
+      <!-- Component Interactive Legend Bar -->
+      <div class="component-legend-bar">
+        <div class="legend-header">
+          <span>Component Legend (Click to Select in 3D):</span>
+          <div class="legend-state-indicators">
+            <span><span class="legend-dot normal"></span> Normal</span>
+            <span><span class="legend-dot warning"></span> Warning</span>
+            <span><span class="legend-dot critical"></span> Critical</span>
+          </div>
+        </div>
+        <div class="legend-chips-grid" id="legendChipsGrid">
+          <!-- Dynamically populated component chips -->
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Component-Level Diagnostic Engine Panel -->
+    <div class="diagnostics-panel-card">
+      <div class="diag-card-header">
+        <div class="diag-title-group">
+          <div class="diag-badge">EXPLAINABLE AI</div>
+          <h3>Component Diagnostics</h3>
+        </div>
+        <div class="diag-status-pill" id="diagSummaryPill">NOMINAL OPERATION</div>
+      </div>
+
+      <!-- Diagnostic Executive Summary -->
+      <div class="diag-summary-box" id="diagSummaryBox">
+        <div class="diag-summary-text" id="diagSummaryText">Evaluating real-time twin telemetry...</div>
+      </div>
+
+      <!-- Diagnostic Entries Scroll Area -->
+      <div class="diag-list-container" id="diagListContainer">
+        <!-- Rendered component diagnostic cards -->
+      </div>
+
+      <!-- Selected Component Deep-Dive Inspector Card -->
+      <div class="selected-component-inspector" id="selectedCompInspector">
+        <div class="inspector-header">
+          <span class="inspector-title" id="inspectorTitle">Selected Component Details</span>
+          <span class="inspector-status-badge" id="inspectorBadge">NORMAL</span>
+        </div>
+        <div class="inspector-body" id="inspectorBody">
+          Select a component in the 3D model or from the legend to inspect mechanical specifications, fault signatures, and maintenance actions.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Twin Display Grid (Motor and Pump Subsystems) -->
   <main class="twin-grid">
 
     <!-- MOTOR DIGITAL TWIN -->
@@ -722,9 +1426,9 @@
       </div>
 
       <!-- Pump Telemetry Parameters -->
-      <div class="telemetry-grid pump-telemetry-grid">
+      <div class="telemetry-grid">
         <div class="param-tile">
-          <div class="param-name">Pump Temperature</div>
+          <div class="param-name">Pump Housing Temp</div>
           <div class="param-value-box">
             <span class="param-value" id="pumpTemp">--</span>
             <span class="param-unit">&deg;C</span>
@@ -732,26 +1436,10 @@
         </div>
 
         <div class="param-tile">
-          <div class="param-name">Vibration (RMS)</div>
+          <div class="param-name">Pump Vibration (RMS)</div>
           <div class="param-value-box">
             <span class="param-value" id="pumpVib">--</span>
             <span class="param-unit">mm/s</span>
-          </div>
-        </div>
-
-        <div class="param-tile">
-          <div class="param-name">Pump Current</div>
-          <div class="param-value-box">
-            <span class="param-value" id="pumpCurrent">--</span>
-            <span class="param-unit">A</span>
-          </div>
-        </div>
-
-        <div class="param-tile">
-          <div class="param-name">Pump Speed</div>
-          <div class="param-value-box">
-            <span class="param-value" id="pumpRpm">--</span>
-            <span class="param-unit">RPM</span>
           </div>
         </div>
 
@@ -779,36 +1467,869 @@
   <section class="controls-panel">
     <div class="controls-header">
       <div>
-        <h3>Coupled Pump-Motor Simulator (Simulated Demonstration Model)</h3>
+        <h3>Coupled Pump-Motor Simulator & Component Diagnostic Injection</h3>
         <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">
-          Derived physics: Direct drive shaft coupling (RPM<sub>pump</sub> = RPM<sub>motor</sub>), 
-          simplified pump Affinity Laws (Q &prop; N, P &prop; N&sup2;), motor current reduction under pump dry-run starvation, 
-          and configurable baseplate vibration transmissibility.
+          [SIMULATION DISCLAIMER] Injected scenarios represent idealized deterministic physics models for testing and review demonstration.
+          They are not physical sensor readings. Wokwi ESP32 stream connects via <code>POST /telemetry</code>.
         </p>
       </div>
       <span style="font-size: 0.72rem; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace;">POST /telemetry/simulate</span>
     </div>
+
+    <div class="sim-scenarios-category">Core Coupled Scenarios:</div>
     <div class="sim-buttons-group">
       <button class="btn-sim" onclick="sendSampleTelemetry('normal')">&#9654; Reset Baseline (Normal BEP)</button>
-      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_warning')">&#9888; Inject Motor Stress (Derived Pump Derate)</button>
-      <button class="btn-sim crit" onclick="sendSampleTelemetry('pump_critical')">&#9888; Inject Pump Dry-Run (Derived Motor Unloading)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_warning')">&#9888; Motor Thermal/Vib Stress (Coupled Pump Derate)</button>
+      <button class="btn-sim crit" onclick="sendSampleTelemetry('pump_critical')">&#9888; Pump Dry-Run / Cavitation (Coupled Motor Unload)</button>
       <button class="btn-sim" onclick="sendSampleTelemetry('idle')">&#9209; Stop System (Idle Standby)</button>
     </div>
-    <div class="api-status-msg" id="apiStatusMsg">Ready. Polling /twin every 1.5s. [SIMULATION MODEL] All injected scenarios are idealized numerical approximations, not physical sensor measurements.</div>
+
+    <div class="sim-scenarios-category">Component-Level Diagnostic Scenarios:</div>
+    <div class="sim-buttons-group">
+      <button class="btn-sim crit" onclick="sendSampleTelemetry('motor_overheat')">&#128293; Motor Stator Overheat (Critical)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_bearing')">&#9881; Motor DE Bearing Wear (Warning)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_rotor_fault')">&#8635; Motor Rotor / Shaft Eccentricity (Warning)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('motor_vib_ambiguous')">&#10067; Motor Vibration Ambiguous (Warning)</button>
+      <button class="btn-sim crit" onclick="sendSampleTelemetry('pump_deadhead')">&#9940; Pump Deadhead / Casing Pressure (Critical)</button>
+      <button class="btn-sim warn" onclick="sendSampleTelemetry('pump_impeller')">&#128167; Pump Impeller Recirculation / Wear (Warning)</button>
+      <button class="btn-sim crit" onclick="sendSampleTelemetry('pump_bearing')">&#128308; Pump Bearing Thermal Distress (Critical)</button>
+    </div>
+
+    <div class="api-status-msg" id="apiStatusMsg">Ready. Polling /twin every 1.5s.</div>
   </section>
 
   <footer>
-    <span>Pump & Motor Digital Twin &bull; FastAPI Backend &bull; Predictive Maintenance Framework</span>
-    <span>Scikit-Learn ML Classifiers &bull; Ready for ESP32 &bull; CPS Control</span>
+    <span>Pump & Motor Digital Twin &bull; FastAPI Backend &bull; 3D Component Diagnostics</span>
+    <span>Scikit-Learn ML Classifiers &bull; Wokwi ESP32 Hardware Integration</span>
   </footer>
 
+  <!-- -------------------------------------------------------------------------
+       JAVASCRIPT: APPLICATION LOGIC, 3D ENGINE & COMPONENT DIAGNOSTICS
+       ------------------------------------------------------------------------- -->
   <script>
-    // Determine backend API host: works seamlessly whether served from FastAPI or opened locally
-    const API_BASE = window.location.origin.includes('http') && !window.location.protocol.startsWith('file') 
-      ? window.location.origin 
+    const API_BASE = window.location.origin.includes('http') && !window.location.protocol.startsWith('file')
+      ? window.location.origin
       : 'http://localhost:8000';
 
-    const POLL_INTERVAL = 1500; // 1.5 seconds auto-refresh
+    const POLL_INTERVAL = 1500;
+
+    // Component Catalog with metadata
+    const COMPONENT_CATALOG = {
+      // Motor Components
+      motor_housing: { name: 'Motor Housing & Frame', machine: 'motor', defaultColor: 0x224a68, desc: 'Cast-iron stator frame with cooling fins and terminal box.' },
+      stator_windings: { name: 'Stator Windings', machine: 'motor', defaultColor: 0xc26a28, desc: 'Copper-wound insulated stator electromagnetic coils.' },
+      motor_rotor: { name: 'Rotor Assembly', machine: 'motor', defaultColor: 0x5a6a7c, desc: 'Squirrel-cage laminated induction rotor core and conductor bars.' },
+      motor_shaft: { name: 'Motor Drive Shaft', machine: 'motor', defaultColor: 0x94a3b8, desc: 'Precision alloy steel motor shaft transmitting shaft torque.' },
+      de_bearing: { name: 'Drive-End (DE) Bearing', machine: 'motor', defaultColor: 0x718096, desc: 'High-load roller/ball bearing supporting shaft at coupling end.' },
+      nde_bearing: { name: 'Non-Drive-End (NDE) Bearing', machine: 'motor', defaultColor: 0x718096, desc: 'Rear roller/ball bearing adjacent to motor cooling fan cowl.' },
+
+      // Pump Components
+      pump_casing: { name: 'Pump Volute Casing', machine: 'pump', defaultColor: 0x184878, desc: 'Centrifugal spiral volute converting kinetic velocity into pressure head.' },
+      pump_impeller: { name: 'Pump Impeller', machine: 'pump', defaultColor: 0xb8860b, desc: 'Precision backward-curved centrifugal fluid delivery impeller.' },
+      pump_shaft: { name: 'Pump Shaft', machine: 'pump', defaultColor: 0x94a3b8, desc: 'Stainless steel pump drive shaft coupled directly to motor.' },
+      pump_bearings: { name: 'Pump Bearings Frame', machine: 'pump', defaultColor: 0x4a5d73, desc: 'Bearing pedestal containing radial and thrust bearing assemblies.' },
+      mechanical_seal: { name: 'Mechanical Seal Cartridge', machine: 'pump', defaultColor: 0x0ea5e9, desc: 'Rotating and stationary seal faces sealing fluid around shaft.' }
+    };
+
+    // State container
+    let latestTwinSnapshot = null;
+    let selectedComponentId = null;
+    let isCutaway = false;
+    let autoRotate = false;
+    let currentViewMode = 'coupled'; // 'coupled', 'motor', 'pump'
+
+    // Three.js instances
+    let scene, camera, renderer, controls;
+    let threeMeshes = {}; // componentId -> Array of THREE.Mesh
+    let rotatingParts = [];
+    let raycaster, mouse;
+    let isThreeInitialized = false;
+
+    // -------------------------------------------------------------------------
+    // 1. INITIALIZE 3D THREE.JS ENGINE
+    // -------------------------------------------------------------------------
+    function init3D() {
+      const container = document.getElementById('threeContainer');
+      if (!container) return;
+
+      if (typeof THREE === 'undefined') {
+        console.warn('Three.js not loaded. Activating 2D schematic fallback.');
+        activateFallback();
+        return;
+      }
+
+      try {
+        const width = container.clientWidth || 600;
+        const height = container.clientHeight || 440;
+
+        scene = new THREE.Scene();
+        scene.background = null; // transparent to use CSS gradient
+
+        camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+        camera.position.set(0, 5.0, 10.5);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        if (typeof THREE.OrbitControls !== 'undefined') {
+          controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+          controls.dampingFactor = 0.08;
+          controls.minDistance = 3.0;
+          controls.maxDistance = 22.0;
+          controls.maxPolarAngle = Math.PI / 2 + 0.05; // don't go below floor
+          controls.target.set(0, 1.2, 0);
+        }
+
+        // Illumination
+        const ambientLight = new THREE.AmbientLight(0xdce7f5, 1.4);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        keyLight.position.set(7, 10, 6);
+        keyLight.castShadow = true;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x06b6d4, 0.8);
+        fillLight.position.set(-8, 4, -4);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0x3b82f6, 0.6);
+        rimLight.position.set(0, -4, -6);
+        scene.add(rimLight);
+
+        // Build 3D Models
+        buildSkidBase();
+        buildMotorModel();
+        buildCoupling();
+        buildPumpModel();
+
+        // Interaction
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        container.addEventListener('mousemove', onMouseMove, false);
+        container.addEventListener('click', onMouseClick, false);
+        window.addEventListener('resize', onWindowResize, false);
+
+        isThreeInitialized = true;
+        animate3D();
+      } catch (e) {
+        console.error('Failed to initialize WebGL context:', e);
+        activateFallback();
+      }
+    }
+
+    // Baseplate / Skid
+    function buildSkidBase() {
+      const baseGeo = new THREE.BoxGeometry(11.8, 0.35, 3.8);
+      const baseMat = new THREE.MeshStandardMaterial({
+        color: 0x151f2e,
+        metalness: 0.8,
+        roughness: 0.35
+      });
+      const skid = new THREE.Mesh(baseGeo, baseMat);
+      skid.position.set(-0.5, 0.175, 0);
+      skid.receiveShadow = true;
+      scene.add(skid);
+
+      // Floor grid reflection
+      const grid = new THREE.GridHelper(16, 20, 0x263550, 0x182234);
+      grid.position.y = 0;
+      scene.add(grid);
+    }
+
+    // Flexible Coupling
+    function buildCoupling() {
+      const couplingGroup = new THREE.Group();
+      couplingGroup.position.set(-0.65, 1.55, 0);
+
+      const hubMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.25 });
+      const spiderMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
+
+      const hub1 = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.32, 24), hubMat);
+      hub1.rotation.z = Math.PI / 2;
+      hub1.position.x = -0.16;
+
+      const hub2 = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.32, 24), hubMat);
+      hub2.rotation.z = Math.PI / 2;
+      hub2.position.x = 0.16;
+
+      const spider = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.40, 0.08, 24), spiderMat);
+      spider.rotation.z = Math.PI / 2;
+
+      couplingGroup.add(hub1);
+      couplingGroup.add(hub2);
+      couplingGroup.add(spider);
+      scene.add(couplingGroup);
+      rotatingParts.push(couplingGroup);
+    }
+
+    // Register mesh helper
+    function registerComponentMesh(compKey, mesh) {
+      if (!threeMeshes[compKey]) threeMeshes[compKey] = [];
+      mesh.userData.componentId = compKey;
+      mesh.userData.defaultMaterial = mesh.material;
+      threeMeshes[compKey].push(mesh);
+    }
+
+    // Motor 3D Assembly
+    function buildMotorModel() {
+      const motorCenter = new THREE.Vector3(-3.2, 1.55, 0);
+
+      // 1. Motor Shaft
+      const shaftMat = new THREE.MeshStandardMaterial({ color: 0xa0aec0, metalness: 0.9, roughness: 0.15 });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 4.8, 24), shaftMat);
+      shaft.rotation.z = Math.PI / 2;
+      shaft.position.copy(motorCenter);
+      scene.add(shaft);
+      registerComponentMesh('motor_shaft', shaft);
+      rotatingParts.push(shaft);
+
+      // 2. Motor Rotor (Mounted on shaft)
+      const rotorMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.4 });
+      const rotor = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 2.3, 32), rotorMat);
+      rotor.rotation.z = Math.PI / 2;
+      rotor.position.copy(motorCenter);
+      scene.add(rotor);
+      registerComponentMesh('motor_rotor', rotor);
+      rotatingParts.push(rotor);
+
+      // 3. Stator Windings (Concentric around rotor)
+      const statorMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.65, roughness: 0.3 });
+      const statorCore = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 2.5, 32, 1, true), statorMat);
+      statorCore.rotation.z = Math.PI / 2;
+      statorCore.position.copy(motorCenter);
+      scene.add(statorCore);
+      registerComponentMesh('stator_windings', statorCore);
+
+      // End turn winding coils
+      const coilDE = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.15, 16, 32), statorMat);
+      coilDE.rotation.y = Math.PI / 2;
+      coilDE.position.set(motorCenter.x + 1.2, motorCenter.y, motorCenter.z);
+      scene.add(coilDE);
+      registerComponentMesh('stator_windings', coilDE);
+
+      const coilNDE = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.15, 16, 32), statorMat);
+      coilNDE.rotation.y = Math.PI / 2;
+      coilNDE.position.set(motorCenter.x - 1.2, motorCenter.y, motorCenter.z);
+      scene.add(coilNDE);
+      registerComponentMesh('stator_windings', coilNDE);
+
+      // 4. Drive-End (DE) Bearing
+      const bearingMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+      const deBearing = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.16, 16, 24), bearingMat);
+      deBearing.rotation.y = Math.PI / 2;
+      deBearing.position.set(motorCenter.x + 1.55, motorCenter.y, motorCenter.z);
+      scene.add(deBearing);
+      registerComponentMesh('de_bearing', deBearing);
+
+      // 5. Non-Drive-End (NDE) Bearing
+      const ndeBearing = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.16, 16, 24), bearingMat);
+      ndeBearing.rotation.y = Math.PI / 2;
+      ndeBearing.position.set(motorCenter.x - 1.55, motorCenter.y, motorCenter.z);
+      scene.add(ndeBearing);
+      registerComponentMesh('nde_bearing', ndeBearing);
+
+      // 6. Motor Housing / Frame (Outer Casing with cooling fins)
+      const housingMat = new THREE.MeshStandardMaterial({
+        color: 0x1e3a5f,
+        metalness: 0.45,
+        roughness: 0.4,
+        transparent: false,
+        opacity: 1.0
+      });
+
+      const housingCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.40, 1.40, 3.4, 32), housingMat);
+      housingCyl.rotation.z = Math.PI / 2;
+      housingCyl.position.copy(motorCenter);
+      scene.add(housingCyl);
+      registerComponentMesh('motor_housing', housingCyl);
+
+      // Cooling fins radiating outward
+      for (let i = 0; i < 14; i++) {
+        const angle = (i / 14) * Math.PI * 2;
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.18, 0.06), housingMat);
+        fin.position.set(
+          motorCenter.x,
+          motorCenter.y + Math.cos(angle) * 1.45,
+          motorCenter.z + Math.sin(angle) * 1.45
+        );
+        fin.rotation.x = angle;
+        scene.add(fin);
+        registerComponentMesh('motor_housing', fin);
+      }
+
+      // Terminal Connection Box on top
+      const tBox = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.85), housingMat);
+      tBox.position.set(motorCenter.x, motorCenter.y + 1.70, motorCenter.z);
+      scene.add(tBox);
+      registerComponentMesh('motor_housing', tBox);
+
+      // Motor Mounting Feet
+      const footMat = new THREE.MeshStandardMaterial({ color: 0x162a45, metalness: 0.6, roughness: 0.4 });
+      const foot1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.4, 0.6), footMat);
+      foot1.position.set(motorCenter.x, 0.55, motorCenter.z + 1.35);
+      scene.add(foot1);
+
+      const foot2 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.4, 0.6), footMat);
+      foot2.position.set(motorCenter.x, 0.55, motorCenter.z - 1.35);
+      scene.add(foot2);
+    }
+
+    // Centrifugal Pump 3D Assembly
+    function buildPumpModel() {
+      const pumpCenter = new THREE.Vector3(2.2, 1.55, 0);
+
+      // 1. Pump Shaft
+      const shaftMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.18 });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 3.8, 24), shaftMat);
+      shaft.rotation.z = Math.PI / 2;
+      shaft.position.set(1.4, pumpCenter.y, pumpCenter.z);
+      scene.add(shaft);
+      registerComponentMesh('pump_shaft', shaft);
+      rotatingParts.push(shaft);
+
+      // 2. Pump Bearings Frame (Pedestal Housing)
+      const pbMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.65, roughness: 0.35 });
+      const bearingPedestal = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.25, 1.3), pbMat);
+      bearingPedestal.position.set(0.65, pumpCenter.y - 0.1, pumpCenter.z);
+      scene.add(bearingPedestal);
+      registerComponentMesh('pump_bearings', bearingPedestal);
+
+      // Visible internal bearing races
+      const pBearingMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+      const pbr1 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.14, 16, 24), pBearingMat);
+      pbr1.rotation.y = Math.PI / 2;
+      pbr1.position.set(0.2, pumpCenter.y, pumpCenter.z);
+      scene.add(pbr1);
+      registerComponentMesh('pump_bearings', pbr1);
+
+      const pbr2 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.14, 16, 24), pBearingMat);
+      pbr2.rotation.y = Math.PI / 2;
+      pbr2.position.set(1.1, pumpCenter.y, pumpCenter.z);
+      scene.add(pbr2);
+      registerComponentMesh('pump_bearings', pbr2);
+
+      // 3. Mechanical Seal (Between bearing frame and volute backplate)
+      const sealMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.25 });
+      const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.45, 24), sealMat);
+      seal.rotation.z = Math.PI / 2;
+      seal.position.set(1.72, pumpCenter.y, pumpCenter.z);
+      scene.add(seal);
+      registerComponentMesh('mechanical_seal', seal);
+
+      // 4. Pump Impeller (Inside volute)
+      const impellerMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8, roughness: 0.25 });
+      const impellerHub = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.35, 24), impellerMat);
+      impellerHub.rotation.z = Math.PI / 2;
+      impellerHub.position.set(2.4, pumpCenter.y, pumpCenter.z);
+      scene.add(impellerHub);
+      registerComponentMesh('pump_impeller', impellerHub);
+      rotatingParts.push(impellerHub);
+
+      // Impeller curved vanes
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const vane = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 0.28), impellerMat);
+        vane.position.set(2.4, pumpCenter.y + Math.cos(angle) * 0.55, pumpCenter.z + Math.sin(angle) * 0.55);
+        vane.rotation.x = angle + 0.35;
+        scene.add(vane);
+        registerComponentMesh('pump_impeller', vane);
+        rotatingParts.push(vane);
+      }
+
+      // 5. Pump Volute Casing (Exterior housing with inlet/outlet nozzles)
+      const casingMat = new THREE.MeshStandardMaterial({
+        color: 0x1d4ed8,
+        metalness: 0.45,
+        roughness: 0.4,
+        transparent: false,
+        opacity: 1.0
+      });
+
+      // Spiral volute body
+      const volute = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.55, 24, 32), casingMat);
+      volute.rotation.y = Math.PI / 2;
+      volute.position.set(2.4, pumpCenter.y, pumpCenter.z);
+      scene.add(volute);
+      registerComponentMesh('pump_casing', volute);
+
+      // Suction Nozzle (Axial Inlet pointing +X)
+      const suction = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.2, 24), casingMat);
+      suction.rotation.z = Math.PI / 2;
+      suction.position.set(3.4, pumpCenter.y, pumpCenter.z);
+      scene.add(suction);
+      registerComponentMesh('pump_casing', suction);
+
+      // Suction Flange
+      const sFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.15, 24), casingMat);
+      sFlange.rotation.z = Math.PI / 2;
+      sFlange.position.set(4.0, pumpCenter.y, pumpCenter.z);
+      scene.add(sFlange);
+      registerComponentMesh('pump_casing', sFlange);
+
+      // Discharge Nozzle (Vertical Outlet pointing +Y)
+      const discharge = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.4, 24), casingMat);
+      discharge.position.set(2.4, pumpCenter.y + 1.45, pumpCenter.z);
+      scene.add(discharge);
+      registerComponentMesh('pump_casing', discharge);
+
+      // Discharge Flange
+      const dFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.15, 24), casingMat);
+      dFlange.position.set(2.4, pumpCenter.y + 2.15, pumpCenter.z);
+      scene.add(dFlange);
+      registerComponentMesh('pump_casing', dFlange);
+
+      // Pump Casing Foot
+      const pFoot = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.75, 1.4), pbMat);
+      pFoot.position.set(2.4, 0.55, pumpCenter.z);
+      scene.add(pFoot);
+    }
+
+    // Window resize handler
+    function onWindowResize() {
+      const container = document.getElementById('threeContainer');
+      if (!container || !renderer || !camera) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. INTERACTION: RAYCASTING, HIGHLIGHTS & CUTAWAY
+    // -------------------------------------------------------------------------
+    function onMouseMove(event) {
+      if (!isThreeInitialized || !raycaster || !camera) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(scene.children, true);
+
+      const tooltip = document.getElementById('compTooltip');
+      let foundComp = null;
+
+      for (let hit of intersects) {
+        if (hit.object.userData && hit.object.userData.componentId) {
+          foundComp = hit.object.userData.componentId;
+          break;
+        }
+      }
+
+      if (foundComp && COMPONENT_CATALOG[foundComp]) {
+        const meta = COMPONENT_CATALOG[foundComp];
+        const status = getComponentCurrentStatus(foundComp);
+        document.getElementById('tooltipHeader').textContent = meta.name;
+        document.getElementById('tooltipStatus').textContent = `STATUS: ${status.toUpperCase()}`;
+        document.getElementById('tooltipStatus').style.color = getStatusColor(status);
+        document.getElementById('tooltipDesc').textContent = meta.desc;
+
+        tooltip.style.left = `${event.clientX - rect.left + 15}px`;
+        tooltip.style.top = `${event.clientY - rect.top + 15}px`;
+        tooltip.style.display = 'block';
+        renderer.domElement.style.cursor = 'pointer';
+      } else {
+        tooltip.style.display = 'none';
+        renderer.domElement.style.cursor = 'grab';
+      }
+    }
+
+    function onMouseClick(event) {
+      if (!isThreeInitialized || !raycaster || !camera) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(scene.children, true);
+
+      for (let hit of intersects) {
+        if (hit.object.userData && hit.object.userData.componentId) {
+          selectComponent(hit.object.userData.componentId);
+          return;
+        }
+      }
+    }
+
+    function getComponentCurrentStatus(compKey) {
+      if (!latestTwinSnapshot || !latestTwinSnapshot.diagnostics) return 'NORMAL';
+      const map = latestTwinSnapshot.diagnostics.highlighted_components || {};
+      return map[compKey] || 'NORMAL';
+    }
+
+    function getStatusColor(status) {
+      const s = (status || 'NORMAL').toUpperCase();
+      if (s === 'CRITICAL') return 'var(--color-critical)';
+      if (s === 'WARNING') return 'var(--color-warning)';
+      return 'var(--color-healthy)';
+    }
+
+    // Select a component (via 3D click, legend click, or diagnostic list click)
+    function selectComponent(compKey) {
+      selectedComponentId = compKey;
+      const meta = COMPONENT_CATALOG[compKey] || { name: compKey, desc: 'Selected component.' };
+      const status = getComponentCurrentStatus(compKey);
+
+      // Update HUD
+      document.getElementById('hudSelectedComp').textContent = `${meta.name} [${status.toUpperCase()}]`;
+
+      // Update Inspector card
+      document.getElementById('inspectorTitle').textContent = meta.name;
+      const badge = document.getElementById('inspectorBadge');
+      badge.textContent = status.toUpperCase();
+      badge.className = `inspector-status-badge ${status.toLowerCase()}`;
+      if (status === 'CRITICAL') {
+        badge.style.background = 'rgba(239, 68, 68, 0.2)';
+        badge.style.color = 'var(--color-critical)';
+      } else if (status === 'WARNING') {
+        badge.style.background = 'rgba(245, 158, 11, 0.2)';
+        badge.style.color = 'var(--color-warning)';
+      } else {
+        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+        badge.style.color = 'var(--color-healthy)';
+      }
+
+      // Check for matching diagnostic entry
+      let diagInfo = null;
+      if (latestTwinSnapshot && latestTwinSnapshot.diagnostics) {
+        diagInfo = latestTwinSnapshot.diagnostics.diagnoses.find(d => d.suspected_component === compKey);
+      }
+
+      let bodyHtml = `<p>${meta.desc}</p>`;
+      if (diagInfo) {
+        bodyHtml += `
+          <div class="inspector-action">
+            <strong>Diagnostic Fault:</strong> ${diagInfo.fault_category} (${diagInfo.confidence} Confidence)<br>
+            <strong>Recommended Action:</strong> ${diagInfo.recommended_action}
+          </div>
+        `;
+        if (diagInfo.missing_measurements && diagInfo.missing_measurements.length > 0) {
+          bodyHtml += `
+            <div class="inspector-limits">
+              <strong>Sensor Limitations:</strong> ${diagInfo.missing_measurements.join(', ')}.
+            </div>
+          `;
+        }
+      } else {
+        bodyHtml += `
+          <div class="inspector-action" style="border-left-color: var(--color-healthy);">
+            <strong>Status:</strong> Component operating within baseline tolerances. No immediate physical inspection required.
+          </div>
+        `;
+      }
+      document.getElementById('inspectorBody').innerHTML = bodyHtml;
+
+      // Update Legend chips active state
+      document.querySelectorAll('.legend-chip').forEach(chip => {
+        if (chip.dataset.component === compKey) {
+          chip.classList.add('active-selected');
+        } else {
+          chip.classList.remove('active-selected');
+        }
+      });
+
+      // Update diagnostic entry cards active state
+      document.querySelectorAll('.diag-entry-card').forEach(card => {
+        if (card.dataset.component === compKey) {
+          card.classList.add('selected');
+        } else {
+          card.classList.remove('selected');
+        }
+      });
+
+      // If user selected an internal component in Exterior mode, automatically suggest or switch Cutaway
+      if (!isCutaway && ['stator_windings', 'motor_rotor', 'de_bearing', 'nde_bearing', 'pump_impeller', 'mechanical_seal'].includes(compKey)) {
+        toggleCutawayMode(true);
+      }
+    }
+
+    // Cutaway Mode: makes exterior housings transparent to reveal interior
+    function toggleCutawayMode(forceState = null) {
+      isCutaway = forceState !== null ? forceState : !isCutaway;
+      const label = document.getElementById('cutawayLabel');
+      const btn = document.getElementById('btnCutawayToggle');
+
+      if (isCutaway) {
+        label.textContent = 'Cutaway: ON';
+        btn.classList.add('cutaway-active');
+      } else {
+        label.textContent = 'Cutaway: OFF';
+        btn.classList.remove('cutaway-active');
+      }
+
+      // Update housing materials
+      ['motor_housing', 'pump_casing'].forEach(cKey => {
+        const meshes = threeMeshes[cKey] || [];
+        meshes.forEach(m => {
+          if (isCutaway) {
+            m.material.transparent = true;
+            m.material.opacity = 0.22;
+            m.material.depthWrite = false;
+          } else {
+            m.material.transparent = false;
+            m.material.opacity = 1.0;
+            m.material.depthWrite = true;
+          }
+        });
+      });
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      if (controls) controls.autoRotate = autoRotate;
+      const btn = document.getElementById('btnAutoRotate');
+      btn.classList.toggle('active', autoRotate);
+    }
+
+    function set3DView(mode) {
+      currentViewMode = mode;
+      document.getElementById('btnViewCoupled').classList.toggle('active', mode === 'coupled');
+      document.getElementById('btnViewMotor').classList.toggle('active', mode === 'motor');
+      document.getElementById('btnViewPump').classList.toggle('active', mode === 'pump');
+
+      const titleEl = document.getElementById('currentViewTitle');
+      if (mode === 'coupled') {
+        titleEl.textContent = 'Coupled Skid Assembly';
+        tweenCamera(new THREE.Vector3(0, 5.0, 10.5), new THREE.Vector3(0, 1.2, 0));
+      } else if (mode === 'motor') {
+        titleEl.textContent = 'Induction Motor View';
+        tweenCamera(new THREE.Vector3(-3.2, 3.8, 6.2), new THREE.Vector3(-3.2, 1.5, 0));
+      } else if (mode === 'pump') {
+        titleEl.textContent = 'Centrifugal Pump View';
+        tweenCamera(new THREE.Vector3(2.2, 3.8, 6.2), new THREE.Vector3(2.2, 1.5, 0));
+      }
+    }
+
+    function reset3DCamera() {
+      set3DView('coupled');
+    }
+
+    function tweenCamera(targetPos, targetLookAt) {
+      if (!camera || !controls) return;
+      camera.position.copy(targetPos);
+      controls.target.copy(targetLookAt);
+      controls.update();
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. ANIMATION LOOP & COMPONENT EMISSIVE PULSE
+    // -------------------------------------------------------------------------
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+
+      const time = performance.now() * 0.003;
+
+      // Shaft and rotor mechanical rotation when running
+      if (latestTwinSnapshot) {
+        const rpm = (latestTwinSnapshot.motor && latestTwinSnapshot.motor.telemetry)
+          ? latestTwinSnapshot.motor.telemetry.rpm
+          : 0;
+        if (rpm > 50) {
+          const rotationSpeed = (rpm / 1500) * 0.08;
+          rotatingParts.forEach(part => {
+            part.rotation.x += rotationSpeed;
+          });
+        }
+      }
+
+      // Emissive pulse for warning/critical components
+      const highlights = (latestTwinSnapshot && latestTwinSnapshot.diagnostics)
+        ? latestTwinSnapshot.diagnostics.highlighted_components || {}
+        : {};
+
+      for (let compKey in threeMeshes) {
+        const meshes = threeMeshes[compKey];
+        const status = highlights[compKey] || 'NORMAL';
+        const isSelected = (compKey === selectedComponentId);
+
+        meshes.forEach(m => {
+          if (!m.material) return;
+
+          if (isSelected) {
+            // Selected component cyan glow
+            m.material.emissive = new THREE.Color(0x06b6d4);
+            m.material.emissiveIntensity = 0.5 + 0.3 * Math.sin(time * 4);
+          } else if (status === 'CRITICAL') {
+            // Radiant red pulsating glow
+            m.material.emissive = new THREE.Color(0xef4444);
+            m.material.emissiveIntensity = 0.5 + 0.4 * Math.sin(time * 6);
+          } else if (status === 'WARNING') {
+            // Amber warning pulsating glow
+            m.material.emissive = new THREE.Color(0xf59e0b);
+            m.material.emissiveIntensity = 0.35 + 0.25 * Math.sin(time * 4);
+          } else {
+            // Normal baseline
+            m.material.emissive = new THREE.Color(0x000000);
+            m.material.emissiveIntensity = 0.0;
+          }
+        });
+      }
+
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. FALLBACK 2D SCHEMATIC (IF WEBGL/THREE.JS FAILS)
+    // -------------------------------------------------------------------------
+    function activateFallback() {
+      const overlay = document.getElementById('fallbackOverlay');
+      if (overlay) overlay.style.display = 'flex';
+
+      const container = document.getElementById('fallbackSchematic');
+      if (!container) return;
+
+      container.innerHTML = `
+        <svg width="100%" height="280" viewBox="0 0 900 300" style="max-width: 900px;">
+          <!-- Skid -->
+          <rect x="50" y="220" width="800" height="30" fill="#151f2e" stroke="#263550" rx="4"/>
+          <!-- Motor -->
+          <g id="svg_motor_housing" onclick="selectComponent('motor_housing')" style="cursor: pointer;">
+            <rect x="100" y="80" width="260" height="135" fill="#1e3a5f" stroke="#3b82f6" stroke-width="2" rx="6"/>
+            <text x="230" y="155" fill="#f1f5f9" font-size="13" font-family="'Chakra Petch', sans-serif" text-anchor="middle">MOTOR HOUSING</text>
+          </g>
+          <!-- Shaft -->
+          <rect id="svg_motor_shaft" x="70" y="140" width="400" height="15" fill="#94a3b8" stroke="#64748b"/>
+          <!-- Stator Windings (Interior) -->
+          <rect id="svg_stator_windings" x="140" y="95" width="180" height="25" fill="#d97706" opacity="0.8" onclick="selectComponent('stator_windings')" style="cursor: pointer;"/>
+          <rect id="svg_stator_windings_bot" x="140" y="175" width="180" height="25" fill="#d97706" opacity="0.8" onclick="selectComponent('stator_windings')" style="cursor: pointer;"/>
+          <!-- Rotor -->
+          <rect id="svg_motor_rotor" x="160" y="125" width="140" height="45" fill="#475569" stroke="#94a3b8" onclick="selectComponent('motor_rotor')" style="cursor: pointer;"/>
+          <!-- DE Bearing -->
+          <circle id="svg_de_bearing" cx="340" cy="147" r="18" fill="#718096" stroke="#f59e0b" stroke-width="2" onclick="selectComponent('de_bearing')" style="cursor: pointer;"/>
+          <!-- NDE Bearing -->
+          <circle id="svg_nde_bearing" cx="120" cy="147" r="18" fill="#718096" stroke="#f59e0b" stroke-width="2" onclick="selectComponent('nde_bearing')" style="cursor: pointer;"/>
+          <!-- Coupling -->
+          <rect x="370" y="132" width="30" height="30" fill="#f59e0b" rx="2"/>
+          <!-- Pump Bearing Frame -->
+          <rect id="svg_pump_bearings" x="420" y="105" width="130" height="110" fill="#334155" stroke="#475569" stroke-width="2" onclick="selectComponent('pump_bearings')" style="cursor: pointer;"/>
+          <text x="485" y="165" fill="#f1f5f9" font-size="11" font-family="'Chakra Petch', sans-serif" text-anchor="middle">BEARINGS</text>
+          <!-- Mechanical Seal -->
+          <rect id="svg_mechanical_seal" x="555" y="130" width="35" height="35" fill="#0284c7" stroke="#38bdf8" stroke-width="2" onclick="selectComponent('mechanical_seal')" style="cursor: pointer;"/>
+          <!-- Pump Volute Casing -->
+          <path id="svg_pump_casing" d="M 600 70 L 760 70 L 760 215 L 600 215 Z" fill="#1d4ed8" stroke="#3b82f6" stroke-width="2" onclick="selectComponent('pump_casing')" style="cursor: pointer;"/>
+          <text x="680" y="155" fill="#f1f5f9" font-size="13" font-family="'Chakra Petch', sans-serif" text-anchor="middle">PUMP VOLUTE</text>
+          <!-- Impeller inside volute -->
+          <circle id="svg_pump_impeller" cx="660" cy="147" r="38" fill="#d97706" opacity="0.85" onclick="selectComponent('pump_impeller')" style="cursor: pointer;"/>
+        </svg>
+      `;
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. DIAGNOSTICS & DASHBOARD RENDERING
+    // -------------------------------------------------------------------------
+    function renderComponentLegend(highlightMap) {
+      const container = document.getElementById('legendChipsGrid');
+      if (!container) return;
+
+      container.innerHTML = '';
+      for (let cKey in COMPONENT_CATALOG) {
+        const meta = COMPONENT_CATALOG[cKey];
+        const status = (highlightMap && highlightMap[cKey]) ? highlightMap[cKey] : 'NORMAL';
+
+        const chip = document.createElement('div');
+        chip.className = `legend-chip state-${status.toLowerCase()}`;
+        if (cKey === selectedComponentId) chip.classList.add('active-selected');
+        chip.dataset.component = cKey;
+        chip.onclick = () => selectComponent(cKey);
+
+        const dot = document.createElement('span');
+        dot.className = `legend-dot ${status.toLowerCase()}`;
+        chip.appendChild(dot);
+
+        const label = document.createElement('span');
+        label.textContent = meta.name;
+        chip.appendChild(label);
+
+        const statusTag = document.createElement('span');
+        statusTag.style.fontSize = '0.65rem';
+        statusTag.style.opacity = '0.75';
+        statusTag.textContent = `[${status}]`;
+        chip.appendChild(statusTag);
+
+        container.appendChild(chip);
+      }
+    }
+
+    function renderDiagnosticsList(diagResult) {
+      const listContainer = document.getElementById('diagListContainer');
+      const summaryText = document.getElementById('diagSummaryText');
+      const summaryPill = document.getElementById('diagSummaryPill');
+      const hudTag = document.getElementById('hudSeverityTag');
+
+      if (!diagResult) {
+        summaryText.textContent = 'No diagnostic data available.';
+        return;
+      }
+
+      summaryText.textContent = diagResult.summary || 'Operating within nominal limits.';
+
+      // Determine highest severity
+      const diagnoses = diagResult.diagnoses || [];
+      const hasCritical = diagnoses.some(d => d.severity === 'CRITICAL');
+      const hasWarning = diagnoses.some(d => d.severity === 'WARNING');
+
+      if (hasCritical) {
+        summaryPill.textContent = 'CRITICAL ALERTS ACTIVE';
+        summaryPill.className = 'diag-status-pill critical';
+        if (hudTag) { hudTag.textContent = 'CRITICAL FAULT'; hudTag.style.color = 'var(--color-critical)'; }
+      } else if (hasWarning) {
+        summaryPill.textContent = 'MAINTENANCE WARNINGS';
+        summaryPill.className = 'diag-status-pill warning';
+        if (hudTag) { hudTag.textContent = 'WARNING ACTIVE'; hudTag.style.color = 'var(--color-warning)'; }
+      } else {
+        summaryPill.textContent = 'ALL NOMINAL';
+        summaryPill.className = 'diag-status-pill';
+        if (hudTag) { hudTag.textContent = 'ALL NOMINAL'; hudTag.style.color = 'var(--color-healthy)'; }
+      }
+
+      listContainer.innerHTML = '';
+
+      if (diagnoses.length === 0) {
+        listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem;">All systems operating within baseline parameters.</div>';
+        return;
+      }
+
+      diagnoses.forEach(diag => {
+        const card = document.createElement('div');
+        const sevClass = diag.severity.toLowerCase();
+        card.className = `diag-entry-card ${sevClass}`;
+        if (diag.suspected_component === selectedComponentId) card.classList.add('selected');
+        card.dataset.component = diag.suspected_component || '';
+        card.onclick = () => {
+          if (diag.suspected_component && COMPONENT_CATALOG[diag.suspected_component]) {
+            selectComponent(diag.suspected_component);
+          }
+        };
+
+        const evidenceStr = Object.entries(diag.supporting_evidence || {})
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(' | ');
+
+        card.innerHTML = `
+          <div class="diag-entry-top">
+            <span class="diag-comp-title">${diag.component_name}</span>
+            <span class="diag-severity-badge ${diag.severity}">${diag.severity}</span>
+          </div>
+          <div class="diag-fault-name">${diag.fault_category}</div>
+          <div class="diag-explanation">${diag.explanation}</div>
+          <div class="diag-meta-row">
+            <span class="diag-confidence">Confidence: ${diag.confidence}</span>
+            <span>Machine: ${diag.machine_type.toUpperCase()}</span>
+          </div>
+        `;
+
+        listContainer.appendChild(card);
+      });
+    }
 
     function updateBadge(el, status) {
       if (!el) return;
@@ -859,7 +2380,7 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         renderTwinState(data);
-        
+
         document.getElementById('connDot').style.backgroundColor = 'var(--color-healthy)';
         document.getElementById('connText').textContent = 'TWIN LIVE (1.5s)';
       } catch (err) {
@@ -870,39 +2391,28 @@
     }
 
     function renderTwinState(state) {
-      if (!state) return;
+      latestTwinSnapshot = state;
 
-      // Overall System Status
-      const sysStatus = state.system_status || 'UNKNOWN';
+      // Aggregate System Banner
+      const sysStatus = state.system_status || 'IDLE';
       const sysEl = document.getElementById('systemStatusText');
       sysEl.textContent = sysStatus;
       if (sysStatus === 'CRITICAL_ALERT') sysEl.style.color = 'var(--color-critical)';
       else if (sysStatus === 'WARNING') sysEl.style.color = 'var(--color-warning)';
       else if (sysStatus === 'OPERATIONAL') sysEl.style.color = 'var(--color-healthy)';
-      else sysEl.style.color = 'var(--text-secondary)';
+      else sysEl.style.color = 'var(--accent-cyan)';
 
-      // Telemetry Data Source
-      const srcEl = document.getElementById('dataSourceText');
-      if (srcEl) {
-        const src = state.data_source || 'initialized';
-        if (src === 'simulated') {
-          srcEl.textContent = 'SIMULATED SCENARIO';
-          srcEl.style.color = 'var(--color-warning)';
-        } else if (src === 'live_sensor') {
-          srcEl.textContent = 'LIVE SENSOR (ESP32/IoT)';
-          srcEl.style.color = 'var(--color-healthy)';
-        } else {
-          srcEl.textContent = 'INITIALIZED (NO DATA)';
-          srcEl.style.color = 'var(--text-muted)';
-        }
-      }
+      document.getElementById('lastUpdatedText').textContent = state.last_updated
+        ? new Date(state.last_updated).toLocaleTimeString()
+        : '--:--:--';
 
-      // Timestamp
-      if (state.last_updated) {
-        const d = new Date(state.last_updated);
-        document.getElementById('lastUpdatedText').textContent = d.toLocaleTimeString() + ' (UTC)';
-      } else {
-        document.getElementById('lastUpdatedText').textContent = 'No Telemetry Yet';
+      const sourceEl = document.getElementById('dataSourceText');
+      sourceEl.textContent = (state.data_source || 'live_sensor').toUpperCase();
+
+      // Render Diagnostics and 3D Legend
+      if (state.diagnostics) {
+        renderDiagnosticsList(state.diagnostics);
+        renderComponentLegend(state.diagnostics.highlighted_components);
       }
 
       // Motor State
@@ -917,7 +2427,7 @@
         motor.status
       );
 
-      // Motor ML condition & model availability
+      // Motor ML Condition & Model Status
       const motorAvail = motor.model_available;
       const motorCond = motor.predicted_condition || '--';
       const motorConf = (motor.prediction_confidence !== undefined && motor.prediction_confidence !== null)
@@ -940,7 +2450,7 @@
       const motorConfEl = document.getElementById('motorMlConfidence');
       if (motorConfEl) motorConfEl.textContent = `Confidence: ${motorConf}`;
 
-      // Motor Diagnostic Details
+      // Motor Diagnostic Text
       const motorDiagBox = document.getElementById('motorDiagnosticBox');
       const motorDiagText = document.getElementById('motorDiagnosticText');
       if (motorDiagBox && motorDiagText) {
@@ -974,7 +2484,7 @@
         pump.status
       );
 
-      // Pump ML condition & model availability
+      // Pump ML Condition
       const pumpAvail = pump.model_available;
       const pumpCond = pump.predicted_condition || '--';
       const pumpConf = (pump.prediction_confidence !== undefined && pump.prediction_confidence !== null)
@@ -997,7 +2507,7 @@
       const pumpConfEl = document.getElementById('pumpMlConfidence');
       if (pumpConfEl) pumpConfEl.textContent = `Confidence: ${pumpConf}`;
 
-      // Pump Diagnostic Details
+      // Pump Diagnostic Text
       const pumpDiagBox = document.getElementById('pumpDiagnosticBox');
       const pumpDiagText = document.getElementById('pumpDiagnosticText');
       if (pumpDiagBox && pumpDiagText) {
@@ -1016,7 +2526,7 @@
       const engineStatusEl = document.getElementById('engineStatusText');
       if (engineStatusEl) {
         if (motorAvail && pumpAvail) {
-          engineStatusEl.textContent = 'SCIKIT-LEARN ML MODELS (ACTIVE)';
+          engineStatusEl.textContent = 'SCIKIT-LEARN ML + COMPONENT RULES (ACTIVE)';
           engineStatusEl.style.color = 'var(--color-healthy)';
         } else if (motorAvail || pumpAvail) {
           engineStatusEl.textContent = 'PARTIAL ML (1 MODEL OFFLINE)';
@@ -1030,143 +2540,36 @@
       if (pTelem) {
         document.getElementById('pumpTemp').textContent = formatNumber(pTelem.temperature, 1);
         document.getElementById('pumpVib').textContent = formatNumber(pTelem.vibration, 2);
-        document.getElementById('pumpCurrent').textContent = formatNumber(pTelem.current, 1);
-        document.getElementById('pumpRpm').textContent = formatNumber(pTelem.rpm, 0);
         document.getElementById('pumpPressure').textContent = formatNumber(pTelem.pressure, 2);
         document.getElementById('pumpFlow').textContent = formatNumber(pTelem.flow_rate, 1);
       }
     }
 
-    // Central Dynamically Coupled Physics Simulation Engine (Client-side mirror of backend/twin/simulation.py)
-    const CoupledSimulator = {
-      config: {
-        ratedRpm: 1485.0,
-        ratedFlow: 88.5,           // m³/h
-        ratedPressure: 4.8,        // Bar
-        ratedMotorCurrent: 14.2,   // A
-        ratedPumpCurrent: 11.8,    // A
-        ratedMotorTemp: 56.4,      // °C
-        ratedPumpTemp: 46.2,       // °C
-        baselineMotorVib: 1.6,     // mm/s RMS
-        baselinePumpVib: 1.3,      // mm/s RMS
-        ambientTemp: 26.0,         // °C
-        idleVib: 0.02,             // mm/s RMS
-        vibrationTransmissionRatio: 0.08, // Configurable structural transmission ratio (not a universal law)
-        motorNoLoadCurrent: 5.8    // A (approx 40% of rated induction current under fluid loss)
-      },
-
-      generate(scenario) {
-        const c = this.config;
-        const s = (scenario || 'normal').toLowerCase();
-
-        if (s === 'idle') {
-          // Stopped System
-          return {
-            motor: { temperature: c.ambientTemp, vibration: c.idleVib, current: 0.0, rpm: 0.0 },
-            pump: { temperature: c.ambientTemp, vibration: c.idleVib, current: 0.0, rpm: 0.0, pressure: 0.0, flow_rate: 0.0 }
-          };
-        }
-
-        if (s === 'motor_warning') {
-          // 1. Motor Stress Fault (Primary Fault)
-          const motorTemp = 78.5;
-          const motorVib = 5.2;
-          const motorCurrent = 23.2;
-          const motorRpm = 1445.0; // Slip increases due to mechanical drag
-
-          // 2. Derived Pump Effects (Coupled Physics)
-          // Direct shaft coupling: RPM_pump = RPM_motor
-          const pumpRpm = motorRpm;
-          const speedRatio = pumpRpm / c.ratedRpm; // ~0.973
-
-          // Simplified Pump Affinity Laws: Q ∝ N, P ∝ N²
-          const pumpFlow = Number((c.ratedFlow * speedRatio).toFixed(1));          // ~86.1 m³/h
-          const pumpPressure = Number((c.ratedPressure * Math.pow(speedRatio, 2)).toFixed(2)); // ~4.54 Bar
-          
-          // Structural vibration transmission
-          const excessMotorVib = Math.max(0, motorVib - c.baselineMotorVib);
-          const pumpVib = Number((c.baselinePumpVib + c.vibrationTransmissionRatio * excessMotorVib).toFixed(2)); // ~1.59 mm/s
-          const pumpTemp = Number((c.ratedPumpTemp + 2.5).toFixed(1)); // ~48.7 °C
-          const pumpCurrent = Number((c.ratedPumpCurrent * Math.pow(speedRatio, 3)).toFixed(1)); // ~10.9 A
-
-          return {
-            motor: { temperature: motorTemp, vibration: motorVib, current: motorCurrent, rpm: motorRpm },
-            pump: { temperature: pumpTemp, vibration: pumpVib, current: pumpCurrent, rpm: pumpRpm, pressure: pumpPressure, flow_rate: pumpFlow }
-          };
-        }
-
-        if (s === 'pump_critical') {
-          // 1. Pump Cavitation / Dry Run (Primary Fault)
-          const pumpFlow = 5.0;      // Collapse of fluid delivery
-          const pumpPressure = 0.30; // Severe suction head loss
-          const pumpTemp = 92.0;     // Seal/bearing dry friction heat
-          const pumpVib = 9.5;       // Violent cavitation shockwaves
-          const pumpCurrent = 2.5;   // Minimal hydraulic power
-
-          // 2. Derived Motor Effects (Coupled Physics)
-          // a) Rotor unloads: fluid mass lost, motor current collapses to no-load level
-          const motorCurrent = Number((c.motorNoLoadCurrent + 0.3).toFixed(1)); // ~6.1 A
-          // b) Slip decreases: rotor speed rises towards synchronous (1500 RPM)
-          const motorRpm = 1493.0;
-          const pumpRpm = motorRpm; // Direct shaft coupling
-          // c) Motor thermal behavior: motor losses drop, temperature remains at normal baseline
-          const motorTemp = Number((c.ratedMotorTemp - 0.4).toFixed(1)); // ~56.0 °C
-          // d) Transmitted cavitation shock: structural coupling transmits vibration
-          const excessPumpVib = Math.max(0, pumpVib - c.baselinePumpVib);
-          const motorVib = Number((c.baselineMotorVib + c.vibrationTransmissionRatio * excessPumpVib).toFixed(2)); // ~2.26 mm/s
-
-          return {
-            motor: { temperature: motorTemp, vibration: motorVib, current: motorCurrent, rpm: motorRpm },
-            pump: { temperature: pumpTemp, vibration: pumpVib, current: pumpCurrent, rpm: pumpRpm, pressure: pumpPressure, flow_rate: pumpFlow }
-          };
-        }
-
-        // Default: Normal Baseline (BEP Operation)
-        return {
-          motor: { temperature: c.ratedMotorTemp, vibration: c.baselineMotorVib, current: c.ratedMotorCurrent, rpm: c.ratedRpm },
-          pump: { temperature: c.ratedPumpTemp, vibration: c.baselinePumpVib, current: c.ratedPumpCurrent, rpm: c.ratedRpm, pressure: c.ratedPressure, flow_rate: c.ratedFlow }
-        };
-      }
-    };
-
-    // Central Telemetry Simulation Dispatcher
+    // Telemetry Simulation Dispatcher
     async function sendSampleTelemetry(scenario) {
       const msgEl = document.getElementById('apiStatusMsg');
       msgEl.textContent = `Injecting [${scenario.toUpperCase()}] coupled scenario...`;
 
       try {
-        // Try dedicated backend simulation endpoint first
-        let updatedState = null;
-        try {
-          const resSim = await fetch(`${API_BASE}/telemetry/simulate?scenario=${encodeURIComponent(scenario)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          if (resSim.ok) {
-            updatedState = await resSim.json();
-          }
-        } catch (_) {
-          // Fall back to client-side engine + POST /telemetry
-        }
-
-        // If backend simulation endpoint wasn't reached, dispatch via standard /telemetry
-        if (!updatedState) {
-          const payload = CoupledSimulator.generate(scenario);
-          const res = await fetch(`${API_BASE}/telemetry`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          updatedState = await res.json();
-        }
-
+        const res = await fetch(`${API_BASE}/telemetry/simulate?scenario=${encodeURIComponent(scenario)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const updatedState = await res.json();
         renderTwinState(updatedState);
 
         const scenarioDescriptions = {
           normal: 'Baseline reset (Normal BEP): Rated 1485 RPM, 88.5 m³/h, 4.8 Bar, 14.2A motor.',
-          motor_warning: 'Motor Warning: Motor temp 78.5°C, 5.2 mm/s, 1445 RPM. Derived pump: 1445 RPM, 86.1 m³/h (Affinity Q∝N), 4.54 Bar (P∝N²), 1.59 mm/s transmitted vib.',
-          pump_critical: 'Pump Critical (Dry-Run): Pump 0.3 Bar, 5 m³/h, 92°C, 9.5 mm/s. Derived motor: Unloaded current 6.1A, 1493 RPM, baseline temp 56.0°C, 2.26 mm/s transmitted vib (Motor ML: Normal).',
+          motor_warning: 'Motor Stress: Motor temp 78.5°C, 5.2 mm/s, 1445 RPM. Derived pump Affinity derate.',
+          motor_overheat: 'Motor Stator Overheat: Stator winding temp 94.5°C, high current 24.8A -> Stator windings critical.',
+          motor_bearing: 'Motor DE Bearing Fault: Vibration 5.8 mm/s, 75.0°C temp -> Drive-End bearing warning.',
+          motor_rotor_fault: 'Motor Rotor Fault: Slip 1385 RPM, vibration 6.5 mm/s, current 25.5A -> Rotor assembly warning.',
+          motor_vib_ambiguous: 'Motor Vibration Ambiguous: Vibration 4.8 mm/s with nominal temp/current -> Component ambiguous.',
+          pump_critical: 'Pump Suction Loss / Dry-Run: 0.3 Bar, 5 m³/h, 92°C, 9.5 mm/s -> Mechanical seal & impeller critical.',
+          pump_deadhead: 'Pump Deadheading: 9.4 Bar discharge pressure with closed valve -> Volute casing critical.',
+          pump_impeller: 'Pump Impeller Wear: Low pressure 2.4 Bar, flow 42 m³/h at rated speed -> Impeller wear warning.',
+          pump_bearing: 'Pump Bearing Distress: High vibration 6.2 mm/s and 78.5°C temp -> Pump bearings critical.',
           idle: 'System Stopped: 0 RPM, 0 current, 0 flow, ambient conditions.'
         };
 
@@ -1177,9 +2580,14 @@
       }
     }
 
-    // Polling lifecycle
-    fetchTwinState();
-    setInterval(fetchTwinState, POLL_INTERVAL);
+    // Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      init3D();
+      fetchTwinState();
+      setInterval(fetchTwinState, POLL_INTERVAL);
+    });
   </script>
+
 </body>
+
 </html>
