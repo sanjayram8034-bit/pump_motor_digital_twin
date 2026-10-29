@@ -196,6 +196,132 @@ def generate_coupled_telemetry(
         )
         return TelemetryPayload(motor=motor, pump=pump)
 
+    elif s == "motor_overheat":
+        # Component Demo: Stator Winding Thermal Overload
+        motor = MotorTelemetry(
+            temperature=94.5,
+            vibration=2.2,
+            current=24.8,
+            rpm=1455.0
+        )
+        pump = PumpTelemetry(
+            temperature=49.0,
+            vibration=1.5,
+            current=11.2,
+            rpm=1455.0,
+            pressure=4.6,
+            flow_rate=86.5
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "motor_bearing":
+        # Component Demo: Motor Drive-End Bearing Fault
+        motor = MotorTelemetry(
+            temperature=75.0,
+            vibration=5.8,
+            current=15.2,
+            rpm=1478.0
+        )
+        pump = PumpTelemetry(
+            temperature=47.5,
+            vibration=1.8,
+            current=11.5,
+            rpm=1478.0,
+            pressure=4.75,
+            flow_rate=87.8
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "motor_rotor_fault":
+        # Component Demo: Motor Rotor / Shaft Dynamic Eccentricity
+        motor = MotorTelemetry(
+            temperature=76.0,
+            vibration=6.5,
+            current=25.5,
+            rpm=1385.0
+        )
+        pump = PumpTelemetry(
+            temperature=48.0,
+            vibration=1.9,
+            current=9.8,
+            rpm=1385.0,
+            pressure=4.15,
+            flow_rate=82.0
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "motor_vib_ambiguous":
+        # Component Demo: Elevated Vibration with Nominal Current/Temp (Ambiguous Component)
+        motor = MotorTelemetry(
+            temperature=56.5,
+            vibration=4.8,
+            current=14.1,
+            rpm=1485.0
+        )
+        pump = PumpTelemetry(
+            temperature=46.5,
+            vibration=1.55,
+            current=11.8,
+            rpm=1485.0,
+            pressure=4.8,
+            flow_rate=88.5
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "pump_bearing":
+        # Component Demo: Pump Bearing Overheating & Vibration
+        motor = MotorTelemetry(
+            temperature=56.8,
+            vibration=1.95,
+            current=14.0,
+            rpm=1485.0
+        )
+        pump = PumpTelemetry(
+            temperature=78.5,
+            vibration=6.2,
+            current=11.8,
+            rpm=1485.0,
+            pressure=4.7,
+            flow_rate=87.0
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "pump_impeller":
+        # Component Demo: Pump Impeller Hydraulic Degradation / Recirculation
+        motor = MotorTelemetry(
+            temperature=56.0,
+            vibration=1.8,
+            current=11.2,
+            rpm=1485.0
+        )
+        pump = PumpTelemetry(
+            temperature=48.0,
+            vibration=2.4,
+            current=10.0,
+            rpm=1485.0,
+            pressure=2.4,
+            flow_rate=42.0
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
+    elif s == "pump_deadhead":
+        # Component Demo: Pump Deadheading / Volute Casing Overpressure
+        motor = MotorTelemetry(
+            temperature=58.5,
+            vibration=2.1,
+            current=11.0,
+            rpm=1488.0
+        )
+        pump = PumpTelemetry(
+            temperature=69.0,
+            vibration=3.2,
+            current=8.5,
+            rpm=1488.0,
+            pressure=9.4,
+            flow_rate=3.8
+        )
+        return TelemetryPayload(motor=motor, pump=pump)
+
     else:
         # 4. Default: Normal Baseline Operation
         motor = MotorTelemetry(
